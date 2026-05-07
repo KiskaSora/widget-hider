@@ -230,7 +230,19 @@
         // Event listeners
         document.getElementById('wh-menu-close').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); });
         document.getElementById('wh-action-toggle').addEventListener('click', (e) => { e.stopPropagation(); toggleHide(); closeMenu(); });
-        document.getElementById('wh-action-pick').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); setTimeout(enterPickMode, 100); });
+        document.getElementById('wh-action-pick').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeMenu();
+            // На мобильных устройствах используем список с чекбоксами вместо overlay,
+            // т.к. overlay-режим ненадёжно работает с touch-событиями и elementFromPoint
+            setTimeout(() => {
+                if (isMobile) {
+                    openPickPanel();
+                } else {
+                    enterPickMode();
+                }
+            }, 100);
+        });
         document.getElementById('wh-action-auto').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); openScanPanel(); });
         document.getElementById('wh-action-manage').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); openManagePanel(); });
         document.getElementById('wh-action-clear').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); clearTargets(); });
@@ -1062,7 +1074,7 @@
             applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v2.4 - Ready (overlay pick mode fixed + mobile hint at bottom)');
+        console.log('Widget Hider v2.5 - Ready (mobile pick uses panel with checkboxes instead of overlay)');
     }
 
     if (document.readyState === 'loading') {
