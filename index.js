@@ -227,11 +227,45 @@
         // FAB - Floating Action Button for quick toggle
         const fab = el('div', { id: `${EXT_NAME}-fab` });
         fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
-        fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
+        fab.title = 'Тап: скрыть/показать | Долгий тап: меню';
+        
+        // Long press detection for opening menu
+        let fabLongPressTimer = null;
+        let fabLongPressed = false;
+        
+        fab.addEventListener('touchstart', (e) => {
+            fabLongPressed = false;
+            fabLongPressTimer = setTimeout(() => {
+                fabLongPressed = true;
+                // Vibrate if available
+                if (navigator.vibrate) navigator.vibrate(50);
+                openMainMenu();
+            }, 500);
+        }, { passive: true });
+        
+        fab.addEventListener('touchend', (e) => {
+            if (fabLongPressTimer) {
+                clearTimeout(fabLongPressTimer);
+                fabLongPressTimer = null;
+            }
+            // If long pressed, don't toggle
+            if (fabLongPressed) {
+                fabLongPressed = false;
+                return;
+            }
+        });
+        
+        fab.addEventListener('touchmove', () => {
+            if (fabLongPressTimer) {
+                clearTimeout(fabLongPressTimer);
+                fabLongPressTimer = null;
+            }
+        }, { passive: true });
+        
         fab.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Don't toggle if we just finished dragging
-            if (fabMoved) return;
+            // Don't toggle if we just finished dragging or long press
+            if (fabMoved || fabLongPressed) return;
             toggleHide();
             updateFabState();
         });

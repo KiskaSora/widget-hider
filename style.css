@@ -474,36 +474,52 @@
 }
 
 /* ── Responsive adjustments ──────────────────────────────────────────────── */
-@media (max-width: 768px) {
-    /* MOBILE: Bottom sheet style menu */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    /* MOBILE: Bottom sheet style menu - FIXED POSITIONING */
     #widget-hider-menu {
         position: fixed !important;
         min-width: unset !important;
         max-width: unset !important;
-        width: 100vw !important;
-        max-height: 70vh !important;
-        max-height: 70dvh !important;
+        width: 100% !important;
+        max-height: 75vh !important;
+        max-height: 75dvh !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
-        padding: 8px 0 !important;
-        /* Position at bottom of screen */
+        padding: 12px 0 !important;
+        /* CRITICAL: Position at bottom of screen */
         top: auto !important;
         bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        transform: none !important;
+        transform: translateY(0) !important;
         margin: 0 !important;
         border-radius: 20px 20px 0 0 !important;
+        border-bottom: none !important;
         /* Safe area padding */
-        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
         -webkit-overflow-scrolling: touch;
+        /* Ensure visibility */
+        z-index: 99999999 !important;
+        background: rgba(15, 15, 25, 0.98) !important;
+        box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.8) !important;
     }
     
     #widget-hider-menu.open {
         display: block !important;
         opacity: 1 !important;
-        animation: wh-menu-slide-up 0.3s ease forwards !important;
-        transform: none !important;
+        animation: wh-menu-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
+        transform: translateY(0) !important;
+    }
+    
+    /* Drag handle indicator for bottom sheet */
+    #widget-hider-menu::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        margin: 0 auto 12px;
     }
     
     /* COMPACT items on mobile to fit more */
@@ -686,13 +702,13 @@
 #widget-hider-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 999996;
-    background: rgba(0, 0, 0, 0.5);
+    z-index: 99999998;
+    background: rgba(0, 0, 0, 0.6);
     display: none;
 }
 
 #widget-hider-backdrop.active {
-    display: block;
+    display: block !important;
     animation: wh-fade-in 0.2s ease;
 }
 
