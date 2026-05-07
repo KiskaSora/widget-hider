@@ -766,27 +766,40 @@
 /* Mobile adjustments for FAB - just increase tap target */
 @media (max-width: 768px) {
     #widget-hider-fab {
-        /* Force minimum size for tap target on mobile */
-        --wh-fab-size: max(var(--wh-fab-size, 32px), 32px);
-        padding: 10px;
+        /* Force minimum size for tap target on mobile - removed max() for compatibility */
+        --wh-fab-size: 36px;
+        padding: 12px;
     }
     
-    /* On mobile, FAB is more visible */
+    /* On mobile, FAB is more visible and MUST display */
     #widget-hider-fab.wh-fab-enabled {
-        opacity: 0.7;
+        display: flex !important;
+        opacity: 0.8 !important;
     }
     
     #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-        opacity: 0.4;
+        opacity: 0.5 !important;
     }
     
     /* Brighten icon on mobile for better visibility */
     #widget-hider-fab .wh-fab-icon {
-        color: var(--SmartThemeBodyColor, #ccc);
-        min-width: 28px;
-        min-height: 28px;
-        /* Add subtle shadow for visibility on any background */
-        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+        color: var(--SmartThemeBodyColor, #fff);
+        min-width: 32px;
+        min-height: 32px;
+        /* Add stronger shadow for visibility on any background */
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9));
+    }
+    
+    #widget-hider-fab .wh-fab-icon svg {
+        stroke-width: 2.2;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+    #widget-hider-fab {
+        --wh-fab-size: 40px;
+        padding: 14px;
     }
 }
 

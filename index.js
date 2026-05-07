@@ -847,18 +847,19 @@
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
         
-        if (fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
-            // Custom position - use left/top, but CLAMP to current viewport
-            // (важно для мобильных: позиция сохранённая на ПК может быть за экраном)
-            const vw = window.innerWidth || document.documentElement.clientWidth;
-            const vh = window.innerHeight || document.documentElement.clientHeight;
-            
-            // Прикинем размер кнопки (до того как она отрисована — берём из переменной + padding)
+        const vw = window.innerWidth || document.documentElement.clientWidth;
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        
+        // На мобильных (viewport < 768px) ВСЕГДА используем дефолтную позицию
+        // потому что сохранённая с ПК позиция почти гарантированно будет за экраном
+        const isMobileViewport = vw < 768;
+        
+        if (!isMobileViewport && fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
+            // Desktop: Custom position - use left/top, clamp to viewport
             const fabRect = fab.getBoundingClientRect();
-            const fabW = fabRect.width || (fabSize + 20); // padding учтён
+            const fabW = fabRect.width || (fabSize + 20);
             const fabH = fabRect.height || (fabSize + 20);
             
-            // Минимальный безопасный отступ от краёв
             const margin = 4;
             const maxX = Math.max(margin, vw - fabW - margin);
             const maxY = Math.max(margin, vh - fabH - margin);
@@ -866,8 +867,6 @@
             let x = fabPosition.x;
             let y = fabPosition.y;
             
-            // Если позиция явно за экраном (например сохранена на ПК с шириной 1920)
-            // — зажимаем в границы текущего viewport
             const wasOutOfBounds = (x > maxX || y > maxY || x < 0 || y < 0);
             
             x = Math.max(margin, Math.min(x, maxX));
@@ -878,18 +877,16 @@
             fab.style.left = `${x}px`;
             fab.style.top = `${y}px`;
             
-            // Если пришлось корректировать позицию — сохраним новую,
-            // чтобы при следующем заходе кнопка сразу была в видимой области
             if (wasOutOfBounds) {
                 fabPosition = { x, y };
                 saveJSON(STORAGE_FAB_POS, fabPosition);
             }
         } else {
-            // Default position
+            // Mobile или нет сохранённой позиции — дефолтная позиция (правый нижний угол)
             fab.style.left = 'auto';
             fab.style.top = 'auto';
-            fab.style.right = '20px';
-            fab.style.bottom = '120px';
+            fab.style.right = '16px';
+            fab.style.bottom = isMobileViewport ? '100px' : '120px';
         }
     }
     
