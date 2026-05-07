@@ -475,55 +475,101 @@
 
 /* ── Responsive adjustments ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    /* Fix menu positioning on mobile - positioned lower to avoid top overlap */
+    /* CRITICAL FIX: Menu positioning on mobile - use auto positioning from bottom */
     #widget-hider-menu {
         min-width: 280px;
         max-width: 94vw;
         width: 94vw;
-        /* Allow menu to scroll within viewport bounds */
-        max-height: 70vh;
-        max-height: 70dvh;
+        /* REDUCED max-height to fit on small screens */
+        max-height: 60vh;
+        max-height: 60dvh;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 10px 0;
-        /* Position lower on screen to avoid top overlap */
-        top: 55% !important;
+        padding: 8px 0;
+        /* FIXED: Position from bottom instead of center to avoid top overlap */
+        top: auto !important;
+        bottom: 20px !important;
         left: 50% !important;
-        transform: translate(-50%, -50%) scale(1) !important;
-        bottom: auto !important;
+        transform: translateX(-50%) !important;
         right: auto !important;
-        /* Ensure it stays on screen */
         margin: 0;
+        /* Safe area padding */
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
     }
     
     #widget-hider-menu.open {
         animation: wh-menu-in-mobile 0.25s ease forwards;
-        transform: translate(-50%, -50%) scale(1) !important;
+        transform: translateX(-50%) !important;
     }
     
-    /* More compact items on mobile to fit more in viewport */
+    /* COMPACT items on mobile to fit more */
     .wh-menu-item {
-        padding: 14px 18px;
-        font-size: 15px;
-        gap: 12px;
-        min-height: 48px;
+        padding: 12px 16px;
+        font-size: 14px;
+        gap: 10px;
+        min-height: 44px;
     }
     
     .wh-menu-item svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         flex-shrink: 0;
     }
     
     .wh-menu-label {
-        padding: 10px 18px 8px;
-        font-size: 13px;
+        padding: 8px 16px 6px;
+        font-size: 12px;
     }
     
     /* Larger close button for touch */
     .wh-menu-close {
+        font-size: 20px;
+        padding: 6px 10px;
+        min-width: 40px;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .wh-menu-sep {
+        margin: 4px 0;
+    }
+    
+    /* PANELS: Position from bottom for better mobile UX */
+    #widget-hider-manage-panel,
+    #widget-hider-autoscan-panel,
+    #widget-hider-pick-panel {
+        width: 96vw;
+        max-height: 70vh;
+        max-height: 70dvh;
+        border-radius: 16px 16px 0 0;
+        /* FIXED: Position from bottom */
+        top: auto !important;
+        bottom: 0 !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        right: auto !important;
+        /* Safe area padding */
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    
+    #widget-hider-manage-panel.open,
+    #widget-hider-autoscan-panel.open,
+    #widget-hider-pick-panel.open {
+        transform: translateX(-50%) !important;
+        animation: wh-panel-slide-up 0.25s ease forwards;
+    }
+    
+    .wh-panel-header {
+        padding: 14px 16px 12px;
+        font-size: 15px;
+    }
+    
+    /* Larger close button for panels */
+    .wh-panel-close {
         font-size: 22px;
-        padding: 8px 12px;
+        padding: 6px 12px;
         min-width: 44px;
         min-height: 44px;
         display: flex;
@@ -531,54 +577,15 @@
         justify-content: center;
     }
     
-    .wh-menu-sep {
-        margin: 6px 0;
-    }
-    
-    #widget-hider-manage-panel,
-    #widget-hider-autoscan-panel,
-    #widget-hider-pick-panel {
-        width: 96vw;
-        max-height: 80vh;
-        max-height: 80dvh;
-        border-radius: 16px;
-        /* Ensure panels stay within viewport - centered */
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) scale(1) !important;
-        bottom: auto !important;
-        right: auto !important;
-    }
-    
-    #widget-hider-manage-panel.open,
-    #widget-hider-autoscan-panel.open,
-    #widget-hider-pick-panel.open {
-        transform: translate(-50%, -50%) scale(1) !important;
-    }
-    
-    .wh-panel-header {
-        padding: 16px 16px 14px;
-        font-size: 16px;
-    }
-    
-    /* Larger close button for panels */
-    .wh-panel-close {
-        font-size: 24px;
-        padding: 8px 14px;
-        min-width: 48px;
-        min-height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
     .wh-panel-body {
-        padding: 8px 0;
+        padding: 6px 0;
         -webkit-overflow-scrolling: touch;
+        max-height: calc(70vh - 130px);
+        max-height: calc(70dvh - 130px);
     }
     
     .wh-panel-footer {
-        padding: 14px 16px 18px;
+        padding: 12px 16px 16px;
         justify-content: center;
         gap: 10px;
     }
@@ -586,38 +593,39 @@
     .wh-manage-row,
     .wh-scan-row,
     .wh-pick-row {
-        padding: 16px 16px;
-        min-height: 54px;
+        padding: 12px 16px;
+        min-height: 48px;
     }
     
     .wh-manage-sel,
     .wh-scan-sel,
     .wh-pick-sel {
-        font-size: 13px;
+        font-size: 12px;
     }
     
     /* Larger delete button */
     .wh-manage-del {
-        padding: 10px 16px;
-        font-size: 16px;
-        min-width: 44px;
-        min-height: 44px;
+        padding: 8px 14px;
+        font-size: 14px;
+        min-width: 40px;
+        min-height: 40px;
     }
     
     .wh-btn {
-        padding: 14px 20px;
-        font-size: 15px;
+        padding: 12px 18px;
+        font-size: 14px;
         flex: 1;
         text-align: center;
-        min-height: 48px;
+        min-height: 44px;
     }
     
     #widget-hider-pick-hint {
-        padding: 20px 24px;
-        font-size: 15px;
+        padding: 16px 20px;
+        font-size: 14px;
         max-width: 90vw;
-        /* Don't let hint go too high */
-        top: 30% !important;
+        /* Position higher on screen */
+        top: 25% !important;
+        transform: translate(-50%, 0) !important;
     }
     
     .wh-mobile-pick-btn {
@@ -627,11 +635,16 @@
     /* Larger checkboxes on mobile */
     .wh-scan-check input[type="checkbox"],
     .wh-pick-check input[type="checkbox"] {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
-        min-height: 24px;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        min-height: 22px;
         margin-right: 4px;
+    }
+    
+    /* Slider more compact */
+    .wh-menu-slider {
+        padding: 2px 16px 10px 44px;
     }
 }
 
@@ -684,10 +697,16 @@
     to { opacity: 1; }
 }
 
-/* Mobile menu animation - centered */
+/* Mobile menu animation - from bottom */
 @keyframes wh-menu-in-mobile {
-    from { opacity: 0; transform: translate(-50%, -52%) scale(0.96); }
-    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Mobile panel slide up animation */
+@keyframes wh-panel-slide-up {
+    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* ── Safe area support for mobile devices ────────────────────────────────── */
@@ -799,48 +818,74 @@
     color: var(--SmartThemeUserMesColorName, #4a9eff);
 }
 
-/* Mobile adjustments for FAB - MUCH MORE VISIBLE */
+/* Mobile adjustments for FAB - MAXIMUM VISIBILITY */
 @media (max-width: 768px) {
     #widget-hider-fab {
-        /* Force minimum size for tap target on mobile */
-        --wh-fab-size: 36px;
-        padding: 12px;
-        bottom: 100px;
-        right: 15px;
-        /* More visible background on mobile */
-        background: var(--SmartThemeBlurTintColor, rgba(0,0,0,0.85));
-        border: 1px solid var(--SmartThemeBorderColor, rgba(255,255,255,0.3));
-        box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+        /* LARGE size for tap target and visibility on mobile */
+        --wh-fab-size: 44px;
+        padding: 14px;
+        bottom: 140px;
+        right: 12px;
+        /* BRIGHT visible background on mobile */
+        background: rgba(30, 30, 40, 0.95) !important;
+        border: 2px solid rgba(255, 255, 255, 0.5) !important;
+        /* Strong glow effect for visibility */
+        box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.6),
+            0 0 15px rgba(74, 158, 255, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* On mobile, FAB is more visible */
+    /* On mobile, FAB is ALWAYS fully visible */
     #widget-hider-fab.wh-fab-enabled {
-        opacity: 0.9;
+        opacity: 1 !important;
     }
     
     #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-        opacity: 0.7;
+        opacity: 1 !important;
+        /* Blue glow when active */
+        box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.6),
+            0 0 20px rgba(74, 158, 255, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        border-color: rgba(74, 158, 255, 0.7) !important;
     }
     
-    /* Brighten icon on mobile for better visibility */
+    /* BRIGHT white icon on mobile for maximum visibility */
     #widget-hider-fab .wh-fab-icon {
-        color: var(--SmartThemeBodyColor, #ddd);
-        min-width: 32px;
-        min-height: 32px;
+        color: #ffffff !important;
+        min-width: 40px;
+        min-height: 40px;
+    }
+    
+    #widget-hider-fab .wh-fab-icon svg {
+        stroke-width: 2.5;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
     }
     
     #widget-hider-fab.wh-fab-active .wh-fab-icon {
-        color: var(--SmartThemeUserMesColorName, #6ab0ff);
+        color: #6ab0ff !important;
+    }
+    
+    #widget-hider-fab.wh-fab-active .wh-fab-icon svg {
+        filter: drop-shadow(0 0 4px rgba(74, 158, 255, 0.6));
     }
 }
 
 /* Very small screens - even bigger FAB */
 @media (max-width: 480px) {
     #widget-hider-fab {
-        --wh-fab-size: 40px;
-        padding: 14px;
-        bottom: 90px;
-        right: 12px;
+        --wh-fab-size: 48px;
+        padding: 16px;
+        bottom: 120px;
+        right: 10px;
+        /* Even more visible on small screens */
+        border-width: 2px !important;
+    }
+    
+    #widget-hider-fab .wh-fab-icon {
+        min-width: 44px;
+        min-height: 44px;
     }
 }
 
