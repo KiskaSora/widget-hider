@@ -46,7 +46,33 @@
     // ── Detect mobile on resize ───────────────────────────────────────────────
     window.addEventListener('resize', () => {
         isMobile = window.innerWidth < 768;
+        // Re-apply FAB position on resize to keep it in viewport
+        constrainFabToViewport();
     });
+    
+    function constrainFabToViewport() {
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (!fab || !fabPosition) return;
+        
+        const fabRect = fab.getBoundingClientRect();
+        const maxX = window.innerWidth - fabRect.width;
+        const maxY = window.innerHeight - fabRect.height;
+        
+        let needsUpdate = false;
+        let newX = fabPosition.x;
+        let newY = fabPosition.y;
+        
+        if (fabPosition.x > maxX) { newX = Math.max(0, maxX); needsUpdate = true; }
+        if (fabPosition.y > maxY) { newY = Math.max(0, maxY); needsUpdate = true; }
+        if (fabPosition.x < 0) { newX = 0; needsUpdate = true; }
+        if (fabPosition.y < 0) { newY = 0; needsUpdate = true; }
+        
+        if (needsUpdate) {
+            fabPosition = { x: newX, y: newY };
+            saveJSON(STORAGE_FAB_POS, fabPosition);
+            applyFabPosition();
+        }
+    }
 
     // ── SVG Icons ─────────────────────────────────────────────────────────────
     function iconEye() {
@@ -115,6 +141,11 @@
         // Backdrop for modals
         const backdrop = el('div', { id: `${EXT_NAME}-backdrop` });
         backdrop.addEventListener('click', closeAllPanels);
+        // Also handle touch for mobile
+        backdrop.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            closeAllPanels();
+        }, { passive: false });
 
         // Main context menu (centered)
         const menu = el('div', { id: `${EXT_NAME}-menu` });

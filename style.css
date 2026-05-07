@@ -475,99 +475,163 @@
 
 /* ── Responsive adjustments ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    /* Fix menu positioning on mobile - anchor to top with safe spacing */
+    /* Fix menu positioning on mobile - centered with scroll */
     #widget-hider-menu {
-        min-width: 260px;
+        min-width: 280px;
         max-width: 94vw;
+        width: 94vw;
         /* Allow menu to scroll within viewport bounds */
-        max-height: calc(100vh - 80px);
-        max-height: calc(100dvh - 80px);
+        max-height: 80vh;
+        max-height: 80dvh;
         overflow-y: auto;
-        padding: 8px 0;
-        /* Anchor to top of screen with padding for status bar */
-        top: 40px;
-        left: 50%;
-        transform: translateX(-50%) scale(1);
-        bottom: auto;
+        overflow-x: hidden;
+        padding: 10px 0;
+        /* Center in viewport */
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) scale(1) !important;
+        bottom: auto !important;
+        right: auto !important;
+        /* Ensure it stays on screen */
+        margin: 0;
     }
     
     #widget-hider-menu.open {
-        animation: wh-menu-in-mobile 0.2s ease forwards;
+        animation: wh-menu-in-mobile 0.25s ease forwards;
+        transform: translate(-50%, -50%) scale(1) !important;
     }
     
     /* More compact items on mobile to fit more in viewport */
     .wh-menu-item {
-        padding: 12px 18px;
-        font-size: 14px;
+        padding: 14px 18px;
+        font-size: 15px;
         gap: 12px;
+        min-height: 48px;
     }
     
     .wh-menu-item svg {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
     }
     
     .wh-menu-label {
-        padding: 6px 18px 4px;
+        padding: 10px 18px 8px;
+        font-size: 13px;
+    }
+    
+    /* Larger close button for touch */
+    .wh-menu-close {
+        font-size: 22px;
+        padding: 8px 12px;
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .wh-menu-sep {
-        margin: 4px 0;
+        margin: 6px 0;
     }
     
     #widget-hider-manage-panel,
     #widget-hider-autoscan-panel,
     #widget-hider-pick-panel {
         width: 96vw;
-        max-height: 85vh;
-        max-height: 85dvh;
+        max-height: 80vh;
+        max-height: 80dvh;
         border-radius: 16px;
-        /* Ensure panels stay within viewport */
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(1);
+        /* Ensure panels stay within viewport - centered */
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) scale(1) !important;
+        bottom: auto !important;
+        right: auto !important;
+    }
+    
+    #widget-hider-manage-panel.open,
+    #widget-hider-autoscan-panel.open,
+    #widget-hider-pick-panel.open {
+        transform: translate(-50%, -50%) scale(1) !important;
     }
     
     .wh-panel-header {
-        padding: 14px 16px 12px;
+        padding: 16px 16px 14px;
+        font-size: 16px;
+    }
+    
+    /* Larger close button for panels */
+    .wh-panel-close {
+        font-size: 24px;
+        padding: 8px 14px;
+        min-width: 48px;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .wh-panel-body {
         padding: 8px 0;
+        -webkit-overflow-scrolling: touch;
     }
     
     .wh-panel-footer {
-        padding: 12px 16px 14px;
+        padding: 14px 16px 18px;
         justify-content: center;
+        gap: 10px;
     }
     
     .wh-manage-row,
     .wh-scan-row,
     .wh-pick-row {
-        padding: 14px 16px;
+        padding: 16px 16px;
+        min-height: 54px;
     }
     
     .wh-manage-sel,
     .wh-scan-sel,
     .wh-pick-sel {
-        font-size: 12px;
+        font-size: 13px;
+    }
+    
+    /* Larger delete button */
+    .wh-manage-del {
+        padding: 10px 16px;
+        font-size: 16px;
+        min-width: 44px;
+        min-height: 44px;
     }
     
     .wh-btn {
-        padding: 12px 18px;
-        font-size: 14px;
+        padding: 14px 20px;
+        font-size: 15px;
         flex: 1;
         text-align: center;
+        min-height: 48px;
     }
     
     #widget-hider-pick-hint {
-        padding: 18px 22px;
-        font-size: 14px;
-        max-width: 88vw;
+        padding: 20px 24px;
+        font-size: 15px;
+        max-width: 90vw;
+        /* Don't let hint go too high */
+        top: 30% !important;
     }
     
     .wh-mobile-pick-btn {
         display: block;
+    }
+    
+    /* Larger checkboxes on mobile */
+    .wh-scan-check input[type="checkbox"],
+    .wh-pick-check input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        min-height: 24px;
+        margin-right: 4px;
     }
 }
 
@@ -620,10 +684,10 @@
     to { opacity: 1; }
 }
 
-/* Mobile menu animation - anchored from top */
+/* Mobile menu animation - centered */
 @keyframes wh-menu-in-mobile {
-    from { opacity: 0; transform: translateX(-50%) scale(0.96); }
-    to   { opacity: 1; transform: translateX(-50%) scale(1); }
+    from { opacity: 0; transform: translate(-50%, -52%) scale(0.96); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 /* ── Safe area support for mobile devices ────────────────────────────────── */
@@ -661,58 +725,62 @@
 
 /* ── FAB (Floating Action Button) ────────────────────────────────────────── */
 #widget-hider-fab {
-    --wh-fab-size: 28px;
+    --wh-fab-size: 32px;
     position: fixed;
     bottom: 120px;
     right: 20px;
     z-index: 999999;
-    padding: 6px;
-    background: transparent;
-    border: none;
-    border-radius: 0;
+    padding: 8px;
+    background: var(--SmartThemeBlurTintColor, rgba(0,0,0,0.7));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255,255,255,0.2));
+    border-radius: 50%;
     display: none;
     align-items: center;
     justify-content: center;
     cursor: grab;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.2s ease, transform 0.15s ease, background 0.2s ease;
     opacity: 1;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
     user-select: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
 #widget-hider-fab.wh-fab-dragging {
     cursor: grabbing;
     opacity: 1 !important;
+    transform: scale(1.1);
 }
 
 /* FAB visible only when enabled class is set by JS */
 #widget-hider-fab.wh-fab-enabled {
     display: flex;
-    opacity: 0.5;
+    opacity: 0.75;
 }
 
 /* FAB becomes fully visible on hover (desktop) */
 #widget-hider-fab.wh-fab-enabled:hover {
     opacity: 1;
+    transform: scale(1.05);
 }
 
-/* FAB active state (widgets are hidden) - MORE TRANSPARENT */
+/* FAB active state (widgets are hidden) */
 #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-    opacity: 0.3;
+    opacity: 0.6;
+    background: var(--SmartThemeBlurTintColor, rgba(0,0,0,0.5));
 }
 
 #widget-hider-fab.wh-fab-active.wh-fab-enabled:hover {
-    opacity: 0.8;
+    opacity: 0.9;
 }
 
-/* FAB icon - only the eye icon, no background */
+/* FAB icon */
 .wh-fab-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--wh-fab-size, 24px);
-    height: var(--wh-fab-size, 24px);
+    width: var(--wh-fab-size, 32px);
+    height: var(--wh-fab-size, 32px);
     color: var(--SmartThemeBodyColor, #ccc);
     transition: color 0.2s ease;
 }
@@ -731,30 +799,48 @@
     color: var(--SmartThemeUserMesColorName, #4a9eff);
 }
 
-/* Mobile adjustments for FAB - just increase tap target */
+/* Mobile adjustments for FAB - MUCH MORE VISIBLE */
 @media (max-width: 768px) {
     #widget-hider-fab {
         /* Force minimum size for tap target on mobile */
-        --wh-fab-size: max(var(--wh-fab-size, 32px), 32px);
-        padding: 10px;
+        --wh-fab-size: 36px;
+        padding: 12px;
+        bottom: 100px;
+        right: 15px;
+        /* More visible background on mobile */
+        background: var(--SmartThemeBlurTintColor, rgba(0,0,0,0.85));
+        border: 1px solid var(--SmartThemeBorderColor, rgba(255,255,255,0.3));
+        box-shadow: 0 3px 12px rgba(0,0,0,0.5);
     }
     
     /* On mobile, FAB is more visible */
     #widget-hider-fab.wh-fab-enabled {
-        opacity: 0.7;
+        opacity: 0.9;
     }
     
     #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-        opacity: 0.4;
+        opacity: 0.7;
     }
     
     /* Brighten icon on mobile for better visibility */
     #widget-hider-fab .wh-fab-icon {
-        color: var(--SmartThemeBodyColor, #ccc);
-        min-width: 28px;
-        min-height: 28px;
-        /* Add subtle shadow for visibility on any background */
-        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+        color: var(--SmartThemeBodyColor, #ddd);
+        min-width: 32px;
+        min-height: 32px;
+    }
+    
+    #widget-hider-fab.wh-fab-active .wh-fab-icon {
+        color: var(--SmartThemeUserMesColorName, #6ab0ff);
+    }
+}
+
+/* Very small screens - even bigger FAB */
+@media (max-width: 480px) {
+    #widget-hider-fab {
+        --wh-fab-size: 40px;
+        padding: 14px;
+        bottom: 90px;
+        right: 12px;
     }
 }
 
