@@ -519,13 +519,20 @@
     #widget-hider-autoscan-panel,
     #widget-hider-pick-panel {
         width: 96vw;
-        max-height: 85vh;
-        max-height: 85dvh;
+        max-height: calc(100vh - 100px);
+        max-height: calc(100dvh - 100px);
         border-radius: 16px;
-        /* Ensure panels stay within viewport */
-        top: 50%;
+        /* Anchor panels to top like menu for consistent mobile UX */
+        top: 50px;
         left: 50%;
-        transform: translate(-50%, -50%) scale(1);
+        transform: translateX(-50%) scale(1);
+        bottom: auto;
+    }
+    
+    #widget-hider-manage-panel.open,
+    #widget-hider-autoscan-panel.open,
+    #widget-hider-pick-panel.open {
+        animation: wh-panel-in-mobile 0.2s ease forwards;
     }
     
     .wh-panel-header {
@@ -622,6 +629,12 @@
 
 /* Mobile menu animation - anchored from top */
 @keyframes wh-menu-in-mobile {
+    from { opacity: 0; transform: translateX(-50%) scale(0.96); }
+    to   { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* Mobile panel animation - anchored from top */
+@keyframes wh-panel-in-mobile {
     from { opacity: 0; transform: translateX(-50%) scale(0.96); }
     to   { opacity: 1; transform: translateX(-50%) scale(1); }
 }
