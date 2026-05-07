@@ -852,15 +852,15 @@
         const vw = window.innerWidth || document.documentElement.clientWidth;
         const vh = window.innerHeight || document.documentElement.clientHeight;
         
-        // На мобильных (viewport < 768px) ВСЕГДА используем дефолтную позицию
+        // На мобильных (viewport < 768px) ВСЕГДА используем дефолтную позицию из CSS
         // потому что сохранённая с ПК позиция почти гарантированно будет за экраном
         const isMobileViewport = vw < 768;
         
         if (!isMobileViewport && fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
             // Desktop: Custom position - use left/top, clamp to viewport
             const fabRect = fab.getBoundingClientRect();
-            const fabW = fabRect.width || (fabSize + 20);
-            const fabH = fabRect.height || (fabSize + 20);
+            const fabW = fabRect.width || 48;
+            const fabH = fabRect.height || 48;
             
             const margin = 4;
             const maxX = Math.max(margin, vw - fabW - margin);
@@ -884,11 +884,13 @@
                 saveJSON(STORAGE_FAB_POS, fabPosition);
             }
         } else {
-            // Mobile или нет сохранённой позиции — дефолтная позиция (правый нижний угол)
-            fab.style.left = 'auto';
-            fab.style.top = 'auto';
-            fab.style.right = '16px';
-            fab.style.bottom = isMobileViewport ? '100px' : '120px';
+            // Mobile или нет сохранённой позиции — дефолтная позиция слева (как в CSS)
+            // На desktop: left: 14px, top: 180px
+            // На mobile: left: 12px, bottom: 140px (управляется из CSS)
+            fab.style.right = 'auto';
+            fab.style.bottom = isMobileViewport ? '140px' : 'auto';
+            fab.style.left = isMobileViewport ? '12px' : '14px';
+            fab.style.top = isMobileViewport ? 'auto' : '180px';
         }
     }
     
