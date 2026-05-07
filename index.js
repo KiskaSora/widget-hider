@@ -225,9 +225,28 @@
         `;
 
         // FAB - Floating Action Button for quick toggle
+        // Используем inline стили чтобы гарантировать видимость даже если CSS не загрузился
         const fab = el('div', { id: `${EXT_NAME}-fab` });
-        fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
+        fab.innerHTML = `<span class="wh-fab-icon" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;color:#fff;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.9));">${iconEyeOff()}</span>`;
         fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
+        // Критические inline стили для гарантированной видимости
+        fab.style.cssText = `
+            position: fixed !important;
+            bottom: 100px !important;
+            right: 16px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 12px !important;
+            background: rgba(0,0,0,0.6) !important;
+            border: 2px solid rgba(255,255,255,0.3) !important;
+            border-radius: 50% !important;
+            cursor: pointer !important;
+            touch-action: none !important;
+            user-select: none !important;
+            -webkit-tap-highlight-color: transparent !important;
+        `;
         fab.addEventListener('click', (e) => {
             e.stopPropagation();
             // Don't toggle if we just finished dragging
@@ -1010,15 +1029,23 @@
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
 
-        // Update FAB visibility
+        // Update FAB visibility - НО теперь мы используем inline стили,
+        // поэтому просто обновляем display напрямую
+        if (fabVisible) {
+            fab.style.display = 'flex';
+            fab.style.opacity = isHidden ? '0.5' : '0.8';
+        } else {
+            fab.style.display = 'none';
+        }
+        
+        // CSS класс оставляем для совместимости
         fab.classList.toggle('wh-fab-enabled', fabVisible);
         
-        // Apply custom size via CSS variable
-        fab.style.setProperty('--wh-fab-size', `${fabSize}px`);
-        
-        // Update FAB icon based on hidden state
+        // Apply custom size - обновляем inline стиль иконки
         const iconSpan = fab.querySelector('.wh-fab-icon');
         if (iconSpan) {
+            iconSpan.style.width = `${fabSize}px`;
+            iconSpan.style.height = `${fabSize}px`;
             iconSpan.innerHTML = isHidden ? iconEye() : iconEyeOff();
         }
         
@@ -1098,29 +1125,61 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────
     function init() {
+        console.log('[Widget Hider] init() started');
+        console.log('[Widget Hider] viewport:', window.innerWidth, 'x', window.innerHeight);
+        console.log('[Widget Hider] fabVisible from storage:', fabVisible);
+        console.log('[Widget Hider] fabPosition from storage:', fabPosition);
+        console.log('[Widget Hider] isMobile:', isMobile);
+        
         buildUI();
         initFabDrag();
         updateMenuState();
+        
         // Сначала включаем display:flex у FAB через updateFabState,
         // чтобы applyFabPosition мог корректно измерить размеры кнопки
         updateFabState();
         applyFabPosition();
         if (isHidden) applyHiddenState();
         
+        // Проверяем состояние FAB после инициализации
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (fab) {
+            const styles = window.getComputedStyle(fab);
+            console.log('[Widget Hider] FAB element found');
+            console.log('[Widget Hider] FAB classes:', fab.className);
+            console.log('[Widget Hider] FAB computed display:', styles.display);
+            console.log('[Widget Hider] FAB computed position:', styles.position);
+            console.log('[Widget Hider] FAB computed right:', styles.right);
+            console.log('[Widget Hider] FAB computed bottom:', styles.bottom);
+            console.log('[Widget Hider] FAB computed left:', styles.left);
+            console.log('[Widget Hider] FAB computed top:', styles.top);
+            console.log('[Widget Hider] FAB getBoundingClientRect:', fab.getBoundingClientRect());
+        } else {
+            console.error('[Widget Hider] FAB element NOT found!');
+        }
+        
         // Re-apply after page settles (важно для мобильных:
         // мобильные браузеры могут менять innerHeight после старта из-за address bar)
         setTimeout(() => {
+            console.log('[Widget Hider] 500ms re-apply');
             if (isHidden) applyHiddenState();
             updateMenuState();
             updateFabState();
             applyFabPosition();
+            
+            const fab2 = document.getElementById(`${EXT_NAME}-fab`);
+            if (fab2) {
+                console.log('[Widget Hider] FAB rect after 500ms:', fab2.getBoundingClientRect());
+            }
         }, 500);
+        
         setTimeout(() => {
+            console.log('[Widget Hider] 2000ms re-apply');
             updateFabState();
             applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v2.6 - Ready (FAB clamps to viewport on mobile)');
+        console.log('Widget Hider v2.7 - Ready (with debug logging)');
     }
 
     if (document.readyState === 'loading') {
