@@ -475,31 +475,35 @@
 
 /* ── Responsive adjustments ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    /* CRITICAL FIX: Menu positioning on mobile - use auto positioning from bottom */
+    /* MOBILE: Bottom sheet style menu */
     #widget-hider-menu {
-        min-width: 280px;
-        max-width: 94vw;
-        width: 94vw;
-        /* REDUCED max-height to fit on small screens */
-        max-height: 60vh;
-        max-height: 60dvh;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding: 8px 0;
-        /* FIXED: Position from bottom instead of center to avoid top overlap */
+        position: fixed !important;
+        min-width: unset !important;
+        max-width: unset !important;
+        width: 100vw !important;
+        max-height: 70vh !important;
+        max-height: 70dvh !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding: 8px 0 !important;
+        /* Position at bottom of screen */
         top: auto !important;
-        bottom: 20px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        right: auto !important;
-        margin: 0;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+        margin: 0 !important;
+        border-radius: 20px 20px 0 0 !important;
         /* Safe area padding */
-        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+        -webkit-overflow-scrolling: touch;
     }
     
     #widget-hider-menu.open {
-        animation: wh-menu-in-mobile 0.25s ease forwards;
-        transform: translateX(-50%) !important;
+        display: block !important;
+        opacity: 1 !important;
+        animation: wh-menu-slide-up 0.3s ease forwards !important;
+        transform: none !important;
     }
     
     /* COMPACT items on mobile to fit more */
@@ -697,7 +701,13 @@
     to { opacity: 1; }
 }
 
-/* Mobile menu animation - from bottom */
+/* Mobile menu animation - slide up from bottom */
+@keyframes wh-menu-slide-up {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile menu animation - from bottom (legacy) */
 @keyframes wh-menu-in-mobile {
     from { opacity: 0; transform: translateX(-50%) translateY(20px); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }

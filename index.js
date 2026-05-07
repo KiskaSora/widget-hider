@@ -1,6 +1,6 @@
 /**
- * Widget Hider — SillyTavern Extension v2.1
- * Mobile-friendly, centered UI with FAB quick toggle
+ * Widget Hider — SillyTavern Extension v3.0
+ * Mobile-friendly with bottom sheet menus
  */
 
 (function () {
@@ -943,7 +943,7 @@
             applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v2.2 - Ready (with draggable FAB)');
+        console.log('Widget Hider v3.0 - Ready (mobile bottom sheet menus)');
     }
 
     if (document.readyState === 'loading') {
