@@ -302,7 +302,8 @@
 }
 .wh-scan-row:last-child,
 .wh-pick-row:last-child { border-bottom: none; }
-.wh-scan-row.wh-scan-already { opacity: 0.45; }
+.wh-scan-row.wh-scan-already,
+.wh-pick-row.wh-pick-already { opacity: 0.45; }
 
 .wh-scan-check,
 .wh-pick-check {
@@ -335,7 +336,8 @@
     word-break: break-all; 
 }
 
-.wh-scan-note { 
+.wh-scan-note,
+.wh-pick-note { 
     font-size: 11px; 
     color: var(--SmartThemeQuoteColor, var(--grey50, #888)); 
     font-style: italic; 

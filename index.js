@@ -23,8 +23,8 @@
         '#extensionsMenuButton', '#extensionsMenu', '.extensionsMenu',
         `#${EXT_NAME}-toggle`, `#${EXT_NAME}-menu`, `#${EXT_NAME}-pick-overlay`,
         `#${EXT_NAME}-pick-hint`, `#${EXT_NAME}-manage-panel`,
-        `#${EXT_NAME}-autoscan-panel`, `#${EXT_NAME}-backdrop`,
-        `#${EXT_NAME}-fab`,
+        `#${EXT_NAME}-autoscan-panel`, `#${EXT_NAME}-pick-panel`,
+        `#${EXT_NAME}-backdrop`, `#${EXT_NAME}-fab`,
     ];
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -189,6 +189,21 @@
                 <button class="wh-btn wh-btn-ghost" id="wh-scan-cancel">Отмена</button>
             </div>`;
 
+        // Mobile pick panel (альтернатива для мобильных устройств)
+        const pickPanel = el('div', { id: `${EXT_NAME}-pick-panel` });
+        pickPanel.innerHTML = `
+            <div class="wh-panel-header">
+                <span>Выберите виджеты</span>
+                <button class="wh-panel-close" id="wh-pick-close">✕</button>
+            </div>
+            <div class="wh-panel-body" id="wh-pick-list">
+                <div class="wh-panel-empty">Поиск виджетов…</div>
+            </div>
+            <div class="wh-panel-footer">
+                <button class="wh-btn" id="wh-pick-confirm">Добавить выбранные</button>
+                <button class="wh-btn wh-btn-ghost" id="wh-pick-cancel">Отмена</button>
+            </div>`;
+
         // Pick overlay + hint
         const overlay = el('div', { id: `${EXT_NAME}-pick-overlay` });
         const hint = el('div', { id: `${EXT_NAME}-pick-hint` });
@@ -210,7 +225,7 @@
             updateFabState();
         });
 
-        document.body.append(backdrop, menu, managePanel, scanPanel, overlay, hint, fab);
+        document.body.append(backdrop, menu, managePanel, scanPanel, pickPanel, overlay, hint, fab);
 
         // Event listeners
         document.getElementById('wh-menu-close').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); });
@@ -239,6 +254,11 @@
         document.getElementById('wh-scan-cancel').addEventListener('click', closeScanPanel);
         document.getElementById('wh-scan-confirm').addEventListener('click', confirmScan);
 
+        // Pick panel event listeners (для мобильных)
+        document.getElementById('wh-pick-close').addEventListener('click', closePickPanel);
+        document.getElementById('wh-pick-cancel').addEventListener('click', closePickPanel);
+        document.getElementById('wh-pick-confirm').addEventListener('click', confirmPickPanel);
+
         overlay.addEventListener('click', handlePickClick);
         overlay.addEventListener('touchend', handlePickTouch, { passive: false });
         
@@ -264,6 +284,7 @@
         closeMenu();
         closeManagePanel();
         closeScanPanel();
+        closePickPanel();
     }
 
     // ── Menu functions ────────────────────────────────────────────────────────
@@ -554,16 +575,19 @@
 
     // ── Pick Mode ─────────────────────────────────────────────────────────────
     let lastHovered = null;
+    let pickPanelCandidates = [];
 
     function enterPickMode() {
+        // На мобильных устройствах используем панель выбора вместо overlay
+        if (isMobile) {
+            openPickPanel();
+            return;
+        }
+        
         pickModeActive = true;
-
         document.getElementById(`${EXT_NAME}-pick-overlay`).classList.add('active');
         document.getElementById(`${EXT_NAME}-pick-hint`).style.display = 'block';
-
-        if (!isMobile) {
-            document.addEventListener('mousemove', onPickHover, true);
-        }
+        document.addEventListener('mousemove', onPickHover, true);
     }
 
     function exitPickMode() {
@@ -634,6 +658,122 @@
         exitPickMode();
         updateMenuState();
         toastMsg(`Виджет добавлен (${hiddenTargets.length} шт.)`);
+    }
+
+    // ── Mobile Pick Panel (альтернатива для мобильных устройств) ──────────────
+    function openPickPanel() {
+        pickPanelCandidates = collectPickCandidates();
+        renderPickPanel();
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.add('active');
+        document.getElementById(`${EXT_NAME}-pick-panel`).classList.add('open');
+    }
+
+    function closePickPanel() {
+        document.getElementById(`${EXT_NAME}-pick-panel`).classList.remove('open');
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.remove('active');
+        document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
+        pickPanelCandidates = [];
+    }
+
+    function collectPickCandidates() {
+        const seen = new Set();
+        const found = [];
+
+        function add(node) {
+            if (isCoreElement(node)) return;
+            const sel = buildSelector(node);
+            if (!sel || seen.has(sel)) return;
+            seen.add(sel);
+            const alreadyAdded = hiddenTargets.includes(sel);
+            found.push({ node, sel, checked: false, alreadyAdded });
+        }
+
+        // Сначала все плавающие элементы
+        document.querySelectorAll('body > *').forEach(node => {
+            const s = window.getComputedStyle(node);
+            if (s.position === 'fixed' || s.position === 'absolute') add(node);
+        });
+
+        document.querySelectorAll('[style*="position: fixed"],[style*="position:fixed"]').forEach(add);
+
+        // Паттерны для виджетов
+        ['[id$="-widget"]','[id$="-panel"]','[id*="extension"]','.extension-','.ext-','.floating-'].forEach(pat => {
+            try {
+                document.querySelectorAll(pat).forEach(node => {
+                    const s = window.getComputedStyle(node);
+                    if (['fixed','absolute'].includes(s.position)) add(node);
+                });
+            } catch(_) {}
+        });
+
+        return found;
+    }
+
+    function renderPickPanel() {
+        const list = document.getElementById('wh-pick-list');
+        list.innerHTML = '';
+
+        if (pickPanelCandidates.length === 0) {
+            list.innerHTML = '<div class="wh-panel-empty">Плавающих виджетов не обнаружено.</div>';
+            return;
+        }
+
+        pickPanelCandidates.forEach((c, idx) => {
+            const row = el('div');
+            row.className = 'wh-pick-row' + (c.alreadyAdded ? ' wh-pick-already' : '');
+
+            let label = c.sel;
+            const text = (c.node.title || c.node.getAttribute('aria-label') || c.node.textContent || '').trim().slice(0, 40);
+            if (text) label += `  — "${text}"`;
+
+            row.innerHTML = `
+                <div class="wh-pick-check">
+                    <input type="checkbox" data-idx="${idx}" ${c.checked ? 'checked' : ''} ${c.alreadyAdded ? 'disabled' : ''}>
+                    <span class="wh-pick-sel" title="${escapeHtml(c.sel)}">${escapeHtml(label)}</span>
+                    ${c.alreadyAdded ? '<em class="wh-pick-note">(уже добавлен)</em>' : ''}
+                </div>`;
+
+            const cb = row.querySelector('input');
+            
+            cb.addEventListener('change', (e) => { 
+                e.stopPropagation();
+                pickPanelCandidates[idx].checked = cb.checked; 
+            });
+            
+            cb.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            row.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT' || c.alreadyAdded) return;
+                
+                cb.checked = !cb.checked;
+                pickPanelCandidates[idx].checked = cb.checked;
+                
+                // Подсветить элемент
+                document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
+                c.node.classList.add('wh-highlighted');
+            });
+
+            list.appendChild(row);
+        });
+    }
+
+    function confirmPickPanel() {
+        let added = 0;
+        pickPanelCandidates.forEach(c => {
+            if (c.checked && !hiddenTargets.includes(c.sel)) {
+                hiddenTargets.push(c.sel);
+                if (isHidden) {
+                    try { c.node.classList.add('wh-hidden-widget'); } catch(_) {}
+                }
+                added++;
+            }
+        });
+        saveJSON(STORAGE_KEY, hiddenTargets);
+        updateMenuState();
+        closePickPanel();
+        toastMsg(added > 0 ? `Добавлено: ${added}. Всего: ${hiddenTargets.length}` : 'Ничего не добавлено');
     }
 
     // ── Hide / Show ───────────────────────────────────────────────────────────
@@ -924,7 +1064,7 @@
             applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v2.2 - Ready (with draggable FAB)');
+        console.log('Widget Hider v2.3 - Ready (mobile pick panel + draggable FAB)');
     }
 
     if (document.readyState === 'loading') {
