@@ -403,12 +403,21 @@
     font-family: var(--mainFontFamily, Georgia, serif);
     font-size: 15px;
     text-align: center;
-    pointer-events: none;
+    /* Allow clicks on buttons inside */
+    pointer-events: auto;
     z-index: 999995;
     line-height: 1.7;
     display: none;
     max-width: 90vw;
     box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+
+/* Cancel button inside pick hint */
+#widget-hider-pick-cancel {
+    pointer-events: auto;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .widget-hider-pickable {
@@ -516,8 +525,7 @@
     }
     
     #widget-hider-manage-panel,
-    #widget-hider-autoscan-panel,
-    #widget-hider-pick-panel {
+    #widget-hider-autoscan-panel {
         width: 96vw;
         max-height: calc(100vh - 100px);
         max-height: calc(100dvh - 100px);
@@ -529,10 +537,26 @@
         bottom: auto;
     }
     
+    /* Pick panel stays centered on mobile for better UX */
+    #widget-hider-pick-panel {
+        width: 96vw;
+        max-height: calc(100vh - 100px);
+        max-height: calc(100dvh - 100px);
+        border-radius: 16px;
+        /* Keep centered like desktop */
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        bottom: auto;
+    }
+    
     #widget-hider-manage-panel.open,
-    #widget-hider-autoscan-panel.open,
-    #widget-hider-pick-panel.open {
+    #widget-hider-autoscan-panel.open {
         animation: wh-panel-in-mobile 0.2s ease forwards;
+    }
+    
+    #widget-hider-pick-panel.open {
+        animation: wh-panel-in 0.2s ease forwards;
     }
     
     .wh-panel-header {
@@ -612,9 +636,12 @@
 #widget-hider-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 999996;
+    z-index: 999997;
     background: rgba(0, 0, 0, 0.5);
     display: none;
+    /* Ensure touch events work on mobile */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 #widget-hider-backdrop.active {

@@ -114,7 +114,8 @@
     function buildUI() {
         // Backdrop for modals
         const backdrop = el('div', { id: `${EXT_NAME}-backdrop` });
-        backdrop.addEventListener('click', closeAllPanels);
+        backdrop.addEventListener('click', (e) => { e.stopPropagation(); closeAllPanels(); });
+        backdrop.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); closeAllPanels(); }, { passive: false });
 
         // Main context menu (centered)
         const menu = el('div', { id: `${EXT_NAME}-menu` });
@@ -191,7 +192,11 @@
         // Pick overlay + hint
         const overlay = el('div', { id: `${EXT_NAME}-pick-overlay` });
         const hint = el('div', { id: `${EXT_NAME}-pick-hint` });
-        hint.innerHTML = '🎯 Нажимайте на виджеты для выбора<br><small style="opacity:0.7">Escape — отмена</small>';
+        hint.innerHTML = `
+            🎯 Нажимайте на виджеты для выбора
+            <br><small style="opacity:0.7">Escape — отмена</small>
+            <br><button id="${EXT_NAME}-pick-cancel" class="wh-btn wh-btn-ghost" style="margin-top:12px;">Отмена</button>
+        `;
 
         // FAB - Floating Action Button for quick toggle
         const fab = el('div', { id: `${EXT_NAME}-fab` });
@@ -208,14 +213,14 @@
         document.body.append(backdrop, menu, managePanel, scanPanel, overlay, hint, fab);
 
         // Event listeners
-        document.getElementById('wh-menu-close').addEventListener('click', closeMenu);
-        document.getElementById('wh-action-toggle').addEventListener('click', () => { toggleHide(); closeMenu(); });
-        document.getElementById('wh-action-pick').addEventListener('click', () => { closeMenu(); enterPickMode(); });
-        document.getElementById('wh-action-auto').addEventListener('click', () => { closeMenu(); openScanPanel(); });
-        document.getElementById('wh-action-manage').addEventListener('click', () => { closeMenu(); openManagePanel(); });
-        document.getElementById('wh-action-clear').addEventListener('click', () => { closeMenu(); clearTargets(); });
-        document.getElementById('wh-action-fab').addEventListener('click', () => { toggleFabVisibility(); });
-        document.getElementById('wh-action-reset-pos').addEventListener('click', () => { resetFabPosition(); closeMenu(); });
+        document.getElementById('wh-menu-close').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); });
+        document.getElementById('wh-action-toggle').addEventListener('click', (e) => { e.stopPropagation(); toggleHide(); closeMenu(); });
+        document.getElementById('wh-action-pick').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); setTimeout(enterPickMode, 100); });
+        document.getElementById('wh-action-auto').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); openScanPanel(); });
+        document.getElementById('wh-action-manage').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); openManagePanel(); });
+        document.getElementById('wh-action-clear').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); clearTargets(); });
+        document.getElementById('wh-action-fab').addEventListener('click', (e) => { e.stopPropagation(); toggleFabVisibility(); });
+        document.getElementById('wh-action-reset-pos').addEventListener('click', (e) => { e.stopPropagation(); resetFabPosition(); closeMenu(); });
         
         // FAB size slider
         const sizeSlider = document.getElementById('wh-fab-size-slider');
@@ -236,6 +241,13 @@
 
         overlay.addEventListener('click', handlePickClick);
         overlay.addEventListener('touchend', handlePickTouch, { passive: false });
+        
+        // Pick cancel button
+        const pickCancelBtn = document.getElementById(`${EXT_NAME}-pick-cancel`);
+        if (pickCancelBtn) {
+            pickCancelBtn.addEventListener('click', (e) => { e.stopPropagation(); exitPickMode(); });
+            pickCancelBtn.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); exitPickMode(); }, { passive: false });
+        }
 
         // Global keyboard
         document.addEventListener('keydown', (e) => {
