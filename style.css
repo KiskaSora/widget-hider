@@ -474,147 +474,77 @@
 }
 
 /* ── Responsive adjustments ──────────────────────────────────────────────── */
-@media (max-width: 768px), (hover: none) and (pointer: coarse) {
-    /* MOBILE: Bottom sheet style menu - FIXED POSITIONING */
+@media (max-width: 768px) {
+    /* Fix menu positioning on mobile - anchor to top with safe spacing */
     #widget-hider-menu {
-        position: fixed !important;
-        min-width: unset !important;
-        max-width: unset !important;
-        width: 100% !important;
-        max-height: 75vh !important;
-        max-height: 75dvh !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        padding: 12px 0 !important;
-        /* CRITICAL: Position at bottom of screen */
-        top: auto !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        transform: translateY(0) !important;
-        margin: 0 !important;
-        border-radius: 20px 20px 0 0 !important;
-        border-bottom: none !important;
-        /* Safe area padding */
-        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
-        -webkit-overflow-scrolling: touch;
-        /* Ensure visibility */
-        z-index: 99999999 !important;
-        background: rgba(15, 15, 25, 0.98) !important;
-        box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.8) !important;
+        min-width: 260px;
+        max-width: 94vw;
+        /* Allow menu to scroll within viewport bounds */
+        max-height: calc(100vh - 80px);
+        max-height: calc(100dvh - 80px);
+        overflow-y: auto;
+        padding: 8px 0;
+        /* Anchor to top of screen with padding for status bar */
+        top: 40px;
+        left: 50%;
+        transform: translateX(-50%) scale(1);
+        bottom: auto;
     }
     
     #widget-hider-menu.open {
-        display: block !important;
-        opacity: 1 !important;
-        animation: wh-menu-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
-        transform: translateY(0) !important;
+        animation: wh-menu-in-mobile 0.2s ease forwards;
     }
     
-    /* Drag handle indicator for bottom sheet */
-    #widget-hider-menu::before {
-        content: '';
-        display: block;
-        width: 40px;
-        height: 4px;
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 2px;
-        margin: 0 auto 12px;
-    }
-    
-    /* COMPACT items on mobile to fit more */
+    /* More compact items on mobile to fit more in viewport */
     .wh-menu-item {
-        padding: 12px 16px;
+        padding: 12px 18px;
         font-size: 14px;
-        gap: 10px;
-        min-height: 44px;
+        gap: 12px;
     }
     
     .wh-menu-item svg {
         width: 18px;
         height: 18px;
-        flex-shrink: 0;
     }
     
     .wh-menu-label {
-        padding: 8px 16px 6px;
-        font-size: 12px;
-    }
-    
-    /* Larger close button for touch */
-    .wh-menu-close {
-        font-size: 20px;
-        padding: 6px 10px;
-        min-width: 40px;
-        min-height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        padding: 6px 18px 4px;
     }
     
     .wh-menu-sep {
         margin: 4px 0;
     }
     
-    /* PANELS: Position from bottom for better mobile UX */
     #widget-hider-manage-panel,
     #widget-hider-autoscan-panel,
     #widget-hider-pick-panel {
         width: 96vw;
-        max-height: 70vh;
-        max-height: 70dvh;
-        border-radius: 16px 16px 0 0;
-        /* FIXED: Position from bottom */
-        top: auto !important;
-        bottom: 0 !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        right: auto !important;
-        /* Safe area padding */
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
-    
-    #widget-hider-manage-panel.open,
-    #widget-hider-autoscan-panel.open,
-    #widget-hider-pick-panel.open {
-        transform: translateX(-50%) !important;
-        animation: wh-panel-slide-up 0.25s ease forwards;
+        max-height: 85vh;
+        max-height: 85dvh;
+        border-radius: 16px;
+        /* Ensure panels stay within viewport */
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
     }
     
     .wh-panel-header {
         padding: 14px 16px 12px;
-        font-size: 15px;
-    }
-    
-    /* Larger close button for panels */
-    .wh-panel-close {
-        font-size: 22px;
-        padding: 6px 12px;
-        min-width: 44px;
-        min-height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
     
     .wh-panel-body {
-        padding: 6px 0;
-        -webkit-overflow-scrolling: touch;
-        max-height: calc(70vh - 130px);
-        max-height: calc(70dvh - 130px);
+        padding: 8px 0;
     }
     
     .wh-panel-footer {
-        padding: 12px 16px 16px;
+        padding: 12px 16px 14px;
         justify-content: center;
-        gap: 10px;
     }
     
     .wh-manage-row,
     .wh-scan-row,
     .wh-pick-row {
-        padding: 12px 16px;
-        min-height: 48px;
+        padding: 14px 16px;
     }
     
     .wh-manage-sel,
@@ -623,48 +553,21 @@
         font-size: 12px;
     }
     
-    /* Larger delete button */
-    .wh-manage-del {
-        padding: 8px 14px;
-        font-size: 14px;
-        min-width: 40px;
-        min-height: 40px;
-    }
-    
     .wh-btn {
         padding: 12px 18px;
         font-size: 14px;
         flex: 1;
         text-align: center;
-        min-height: 44px;
     }
     
     #widget-hider-pick-hint {
-        padding: 16px 20px;
+        padding: 18px 22px;
         font-size: 14px;
-        max-width: 90vw;
-        /* Position higher on screen */
-        top: 25% !important;
-        transform: translate(-50%, 0) !important;
+        max-width: 88vw;
     }
     
     .wh-mobile-pick-btn {
         display: block;
-    }
-    
-    /* Larger checkboxes on mobile */
-    .wh-scan-check input[type="checkbox"],
-    .wh-pick-check input[type="checkbox"] {
-        width: 22px;
-        height: 22px;
-        min-width: 22px;
-        min-height: 22px;
-        margin-right: 4px;
-    }
-    
-    /* Slider more compact */
-    .wh-menu-slider {
-        padding: 2px 16px 10px 44px;
     }
 }
 
@@ -702,13 +605,13 @@
 #widget-hider-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 99999998;
-    background: rgba(0, 0, 0, 0.6);
+    z-index: 999996;
+    background: rgba(0, 0, 0, 0.5);
     display: none;
 }
 
 #widget-hider-backdrop.active {
-    display: block !important;
+    display: block;
     animation: wh-fade-in 0.2s ease;
 }
 
@@ -717,22 +620,10 @@
     to { opacity: 1; }
 }
 
-/* Mobile menu animation - slide up from bottom */
-@keyframes wh-menu-slide-up {
-    from { opacity: 0; transform: translateY(100%); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Mobile menu animation - from bottom (legacy) */
+/* Mobile menu animation - anchored from top */
 @keyframes wh-menu-in-mobile {
-    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-
-/* Mobile panel slide up animation */
-@keyframes wh-panel-slide-up {
-    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from { opacity: 0; transform: translateX(-50%) scale(0.96); }
+    to   { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
 /* ── Safe area support for mobile devices ────────────────────────────────── */
@@ -770,62 +661,58 @@
 
 /* ── FAB (Floating Action Button) ────────────────────────────────────────── */
 #widget-hider-fab {
-    --wh-fab-size: 32px;
+    --wh-fab-size: 28px;
     position: fixed;
     bottom: 120px;
     right: 20px;
     z-index: 999999;
-    padding: 8px;
-    background: var(--SmartThemeBlurTintColor, rgba(0,0,0,0.7));
-    border: 1px solid var(--SmartThemeBorderColor, rgba(255,255,255,0.2));
-    border-radius: 50%;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
     display: none;
     align-items: center;
     justify-content: center;
     cursor: grab;
-    transition: opacity 0.2s ease, transform 0.15s ease, background 0.2s ease;
+    transition: opacity 0.2s ease;
     opacity: 1;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
     user-select: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
 #widget-hider-fab.wh-fab-dragging {
     cursor: grabbing;
     opacity: 1 !important;
-    transform: scale(1.1);
 }
 
 /* FAB visible only when enabled class is set by JS */
 #widget-hider-fab.wh-fab-enabled {
     display: flex;
-    opacity: 0.75;
+    opacity: 0.5;
 }
 
 /* FAB becomes fully visible on hover (desktop) */
 #widget-hider-fab.wh-fab-enabled:hover {
     opacity: 1;
-    transform: scale(1.05);
 }
 
-/* FAB active state (widgets are hidden) */
+/* FAB active state (widgets are hidden) - MORE TRANSPARENT */
 #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-    opacity: 0.6;
-    background: var(--SmartThemeBlurTintColor, rgba(0,0,0,0.5));
+    opacity: 0.3;
 }
 
 #widget-hider-fab.wh-fab-active.wh-fab-enabled:hover {
-    opacity: 0.9;
+    opacity: 0.8;
 }
 
-/* FAB icon */
+/* FAB icon - only the eye icon, no background */
 .wh-fab-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--wh-fab-size, 32px);
-    height: var(--wh-fab-size, 32px);
+    width: var(--wh-fab-size, 24px);
+    height: var(--wh-fab-size, 24px);
     color: var(--SmartThemeBodyColor, #ccc);
     transition: color 0.2s ease;
 }
@@ -844,74 +731,30 @@
     color: var(--SmartThemeUserMesColorName, #4a9eff);
 }
 
-/* Mobile adjustments for FAB - MAXIMUM VISIBILITY */
+/* Mobile adjustments for FAB - just increase tap target */
 @media (max-width: 768px) {
     #widget-hider-fab {
-        /* LARGE size for tap target and visibility on mobile */
-        --wh-fab-size: 44px;
-        padding: 14px;
-        bottom: 140px;
-        right: 12px;
-        /* BRIGHT visible background on mobile */
-        background: rgba(30, 30, 40, 0.95) !important;
-        border: 2px solid rgba(255, 255, 255, 0.5) !important;
-        /* Strong glow effect for visibility */
-        box-shadow: 
-            0 4px 20px rgba(0, 0, 0, 0.6),
-            0 0 15px rgba(74, 158, 255, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+        /* Force minimum size for tap target on mobile */
+        --wh-fab-size: max(var(--wh-fab-size, 32px), 32px);
+        padding: 10px;
     }
     
-    /* On mobile, FAB is ALWAYS fully visible */
+    /* On mobile, FAB is more visible */
     #widget-hider-fab.wh-fab-enabled {
-        opacity: 1 !important;
+        opacity: 0.7;
     }
     
     #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-        opacity: 1 !important;
-        /* Blue glow when active */
-        box-shadow: 
-            0 4px 20px rgba(0, 0, 0, 0.6),
-            0 0 20px rgba(74, 158, 255, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-        border-color: rgba(74, 158, 255, 0.7) !important;
+        opacity: 0.4;
     }
     
-    /* BRIGHT white icon on mobile for maximum visibility */
+    /* Brighten icon on mobile for better visibility */
     #widget-hider-fab .wh-fab-icon {
-        color: #ffffff !important;
-        min-width: 40px;
-        min-height: 40px;
-    }
-    
-    #widget-hider-fab .wh-fab-icon svg {
-        stroke-width: 2.5;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
-    }
-    
-    #widget-hider-fab.wh-fab-active .wh-fab-icon {
-        color: #6ab0ff !important;
-    }
-    
-    #widget-hider-fab.wh-fab-active .wh-fab-icon svg {
-        filter: drop-shadow(0 0 4px rgba(74, 158, 255, 0.6));
-    }
-}
-
-/* Very small screens - even bigger FAB */
-@media (max-width: 480px) {
-    #widget-hider-fab {
-        --wh-fab-size: 48px;
-        padding: 16px;
-        bottom: 120px;
-        right: 10px;
-        /* Even more visible on small screens */
-        border-width: 2px !important;
-    }
-    
-    #widget-hider-fab .wh-fab-icon {
-        min-width: 44px;
-        min-height: 44px;
+        color: var(--SmartThemeBodyColor, #ccc);
+        min-width: 28px;
+        min-height: 28px;
+        /* Add subtle shadow for visibility on any background */
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
     }
 }
 

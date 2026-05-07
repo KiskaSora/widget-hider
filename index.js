@@ -1,6 +1,6 @@
 /**
- * Widget Hider — SillyTavern Extension v3.0
- * Mobile-friendly with bottom sheet menus
+ * Widget Hider — SillyTavern Extension v2.1
+ * Mobile-friendly, centered UI with FAB quick toggle
  */
 
 (function () {
@@ -46,33 +46,7 @@
     // ── Detect mobile on resize ───────────────────────────────────────────────
     window.addEventListener('resize', () => {
         isMobile = window.innerWidth < 768;
-        // Re-apply FAB position on resize to keep it in viewport
-        constrainFabToViewport();
     });
-    
-    function constrainFabToViewport() {
-        const fab = document.getElementById(`${EXT_NAME}-fab`);
-        if (!fab || !fabPosition) return;
-        
-        const fabRect = fab.getBoundingClientRect();
-        const maxX = window.innerWidth - fabRect.width;
-        const maxY = window.innerHeight - fabRect.height;
-        
-        let needsUpdate = false;
-        let newX = fabPosition.x;
-        let newY = fabPosition.y;
-        
-        if (fabPosition.x > maxX) { newX = Math.max(0, maxX); needsUpdate = true; }
-        if (fabPosition.y > maxY) { newY = Math.max(0, maxY); needsUpdate = true; }
-        if (fabPosition.x < 0) { newX = 0; needsUpdate = true; }
-        if (fabPosition.y < 0) { newY = 0; needsUpdate = true; }
-        
-        if (needsUpdate) {
-            fabPosition = { x: newX, y: newY };
-            saveJSON(STORAGE_FAB_POS, fabPosition);
-            applyFabPosition();
-        }
-    }
 
     // ── SVG Icons ─────────────────────────────────────────────────────────────
     function iconEye() {
@@ -141,11 +115,6 @@
         // Backdrop for modals
         const backdrop = el('div', { id: `${EXT_NAME}-backdrop` });
         backdrop.addEventListener('click', closeAllPanels);
-        // Also handle touch for mobile
-        backdrop.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            closeAllPanels();
-        }, { passive: false });
 
         // Main context menu (centered)
         const menu = el('div', { id: `${EXT_NAME}-menu` });
@@ -227,45 +196,11 @@
         // FAB - Floating Action Button for quick toggle
         const fab = el('div', { id: `${EXT_NAME}-fab` });
         fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
-        fab.title = 'Тап: скрыть/показать | Долгий тап: меню';
-        
-        // Long press detection for opening menu
-        let fabLongPressTimer = null;
-        let fabLongPressed = false;
-        
-        fab.addEventListener('touchstart', (e) => {
-            fabLongPressed = false;
-            fabLongPressTimer = setTimeout(() => {
-                fabLongPressed = true;
-                // Vibrate if available
-                if (navigator.vibrate) navigator.vibrate(50);
-                openMainMenu();
-            }, 500);
-        }, { passive: true });
-        
-        fab.addEventListener('touchend', (e) => {
-            if (fabLongPressTimer) {
-                clearTimeout(fabLongPressTimer);
-                fabLongPressTimer = null;
-            }
-            // If long pressed, don't toggle
-            if (fabLongPressed) {
-                fabLongPressed = false;
-                return;
-            }
-        });
-        
-        fab.addEventListener('touchmove', () => {
-            if (fabLongPressTimer) {
-                clearTimeout(fabLongPressTimer);
-                fabLongPressTimer = null;
-            }
-        }, { passive: true });
-        
+        fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
         fab.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Don't toggle if we just finished dragging or long press
-            if (fabMoved || fabLongPressed) return;
+            // Don't toggle if we just finished dragging
+            if (fabMoved) return;
             toggleHide();
             updateFabState();
         });
@@ -977,7 +912,7 @@
             applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v3.0 - Ready (mobile bottom sheet menus)');
+        console.log('Widget Hider v2.2 - Ready (with draggable FAB)');
     }
 
     if (document.readyState === 'loading') {
