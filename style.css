@@ -486,17 +486,17 @@
 
 /* ── Responsive adjustments ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-    /* Fix menu positioning on mobile - anchor to top with safe spacing */
+    /* Fix menu positioning on mobile - lowered down a bit for easier reach */
     #widget-hider-menu {
         min-width: 260px;
         max-width: 94vw;
         /* Allow menu to scroll within viewport bounds */
-        max-height: calc(100vh - 80px);
-        max-height: calc(100dvh - 80px);
+        max-height: calc(100vh - 140px);
+        max-height: calc(100dvh - 140px);
         overflow-y: auto;
         padding: 8px 0;
-        /* Anchor to top of screen with padding for status bar */
-        top: 40px;
+        /* Lowered position so menu is not too high on the screen */
+        top: 120px;
         left: 50%;
         transform: translateX(-50%) scale(1);
         bottom: auto;
@@ -527,38 +527,23 @@
     }
     
     #widget-hider-manage-panel,
-    #widget-hider-autoscan-panel {
+    #widget-hider-autoscan-panel,
+    #widget-hider-pick-panel {
         width: 96vw;
-        max-height: calc(100vh - 100px);
-        max-height: calc(100dvh - 100px);
+        max-height: calc(100vh - 160px);
+        max-height: calc(100dvh - 160px);
         border-radius: 16px;
-        /* Anchor panels to top like menu for consistent mobile UX */
-        top: 50px;
+        /* Lowered position so panels are not too high on the screen */
+        top: 130px;
         left: 50%;
         transform: translateX(-50%) scale(1);
         bottom: auto;
     }
     
-    /* Pick panel stays centered on mobile for better UX */
-    #widget-hider-pick-panel {
-        width: 96vw;
-        max-height: calc(100vh - 100px);
-        max-height: calc(100dvh - 100px);
-        border-radius: 16px;
-        /* Keep centered like desktop */
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(1);
-        bottom: auto;
-    }
-    
     #widget-hider-manage-panel.open,
-    #widget-hider-autoscan-panel.open {
-        animation: wh-panel-in-mobile 0.2s ease forwards;
-    }
-    
+    #widget-hider-autoscan-panel.open,
     #widget-hider-pick-panel.open {
-        animation: wh-panel-in 0.2s ease forwards;
+        animation: wh-panel-in-mobile 0.2s ease forwards;
     }
     
     .wh-panel-header {

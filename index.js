@@ -44,9 +44,20 @@
     let fabMoved = false;
 
     // ── Detect mobile on resize ───────────────────────────────────────────────
+    let resizeTimer = null;
     window.addEventListener('resize', () => {
         isMobile = window.innerWidth < 768;
+        // Дебаунсим, чтобы не дёргать FAB на каждый пиксель ресайза
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            applyFabPosition();
+        }, 150);
     });
+    // На мобильных особенно важен поворот экрана
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => applyFabPosition(), 200);
+    });
+
 
     // ── SVG Icons ─────────────────────────────────────────────────────────────
     function iconEye() {
@@ -837,11 +848,42 @@
         if (!fab) return;
         
         if (fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
-            // Custom position - use left/top
+            // Custom position - use left/top, but CLAMP to current viewport
+            // (важно для мобильных: позиция сохранённая на ПК может быть за экраном)
+            const vw = window.innerWidth || document.documentElement.clientWidth;
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            
+            // Прикинем размер кнопки (до того как она отрисована — берём из переменной + padding)
+            const fabRect = fab.getBoundingClientRect();
+            const fabW = fabRect.width || (fabSize + 20); // padding учтён
+            const fabH = fabRect.height || (fabSize + 20);
+            
+            // Минимальный безопасный отступ от краёв
+            const margin = 4;
+            const maxX = Math.max(margin, vw - fabW - margin);
+            const maxY = Math.max(margin, vh - fabH - margin);
+            
+            let x = fabPosition.x;
+            let y = fabPosition.y;
+            
+            // Если позиция явно за экраном (например сохранена на ПК с шириной 1920)
+            // — зажимаем в границы текущего viewport
+            const wasOutOfBounds = (x > maxX || y > maxY || x < 0 || y < 0);
+            
+            x = Math.max(margin, Math.min(x, maxX));
+            y = Math.max(margin, Math.min(y, maxY));
+            
             fab.style.right = 'auto';
             fab.style.bottom = 'auto';
-            fab.style.left = `${fabPosition.x}px`;
-            fab.style.top = `${fabPosition.y}px`;
+            fab.style.left = `${x}px`;
+            fab.style.top = `${y}px`;
+            
+            // Если пришлось корректировать позицию — сохраним новую,
+            // чтобы при следующем заходе кнопка сразу была в видимой области
+            if (wasOutOfBounds) {
+                fabPosition = { x, y };
+                saveJSON(STORAGE_FAB_POS, fabPosition);
+            }
         } else {
             // Default position
             fab.style.left = 'auto';
@@ -1061,20 +1103,27 @@
     function init() {
         buildUI();
         initFabDrag();
-        applyFabPosition();
         updateMenuState();
+        // Сначала включаем display:flex у FAB через updateFabState,
+        // чтобы applyFabPosition мог корректно измерить размеры кнопки
         updateFabState();
+        applyFabPosition();
         if (isHidden) applyHiddenState();
         
-        // Re-apply after page settles
+        // Re-apply after page settles (важно для мобильных:
+        // мобильные браузеры могут менять innerHeight после старта из-за address bar)
         setTimeout(() => {
             if (isHidden) applyHiddenState();
             updateMenuState();
             updateFabState();
             applyFabPosition();
+        }, 500);
+        setTimeout(() => {
+            updateFabState();
+            applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v2.5 - Ready (mobile pick uses panel with checkboxes instead of overlay)');
+        console.log('Widget Hider v2.6 - Ready (FAB clamps to viewport on mobile)');
     }
 
     if (document.readyState === 'loading') {
