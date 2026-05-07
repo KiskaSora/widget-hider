@@ -1,0 +1,13 @@
+{
+    "display_name": "Widget Hider",
+    "loading_order": 999,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "Custom",
+    "version": "2.0.0",
+    "description": "Скрывает плавающие виджеты расширений. Поддержка мобильных устройств, множественный выбор, центрированный UI.",
+    "homePage": "",
+    "auto_update": false
+}

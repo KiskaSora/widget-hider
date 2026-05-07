@@ -1,0 +1,924 @@
+/**
+ * Widget Hider — SillyTavern Extension v2.1
+ * Mobile-friendly, centered UI with FAB quick toggle
+ */
+
+(function () {
+    'use strict';
+
+    const EXT_NAME    = 'widget-hider';
+    const STORAGE_KEY = 'widget_hider_targets';
+    const STORAGE_HIDDEN = 'widget_hider_hidden';
+    const STORAGE_FAB_VISIBLE = 'widget_hider_fab_visible';
+    const STORAGE_FAB_SIZE = 'widget_hider_fab_size';
+    const STORAGE_FAB_POS = 'widget_hider_fab_position';
+
+    // ── Core ST elements we must NEVER touch ─────────────────────────────────
+    const CORE_SELECTORS = [
+        '#top-bar', '#chat', '#send_form', '#left-nav-panel', '#right-nav-panel',
+        '#sheld', '#movingDivs', '#expression-holder', '#chat_stopGeneration',
+        '#shadow_popup', '#dialogue_popup', '#debug_menu', '#toast-container',
+        '.draggable', '#form_sheld', '#quickReplyBar', '#extensions_settings',
+        '#settings_holder', '.range-block', '#options_popup',
+        '#extensionsMenuButton', '#extensionsMenu', '.extensionsMenu',
+        `#${EXT_NAME}-toggle`, `#${EXT_NAME}-menu`, `#${EXT_NAME}-pick-overlay`,
+        `#${EXT_NAME}-pick-hint`, `#${EXT_NAME}-manage-panel`,
+        `#${EXT_NAME}-autoscan-panel`, `#${EXT_NAME}-backdrop`,
+        `#${EXT_NAME}-fab`,
+    ];
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let hiddenTargets  = loadJSON(STORAGE_KEY, []);
+    let isHidden       = loadJSON(STORAGE_HIDDEN, false);
+    let fabVisible     = loadJSON(STORAGE_FAB_VISIBLE, true);
+    let fabSize        = loadJSON(STORAGE_FAB_SIZE, 28); // размер в пикселях (16-48)
+    let fabPosition    = loadJSON(STORAGE_FAB_POS, null); // {x, y} или null для дефолта
+    let pickModeActive = false;
+    let menuOpen       = false;
+    let isMobile       = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+    
+    // FAB drag state
+    let fabDragging = false;
+    let fabDragStart = { x: 0, y: 0 };
+    let fabStartPos = { x: 0, y: 0 };
+    let fabMoved = false;
+
+    // ── Detect mobile on resize ───────────────────────────────────────────────
+    window.addEventListener('resize', () => {
+        isMobile = window.innerWidth < 768;
+    });
+
+    // ── SVG Icons ─────────────────────────────────────────────────────────────
+    function iconEye() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>`;
+    }
+    function iconCrosshair() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="2" x2="12" y2="6"/>
+                  <line x1="12" y1="18" x2="12" y2="22"/>
+                  <line x1="2" y1="12" x2="6" y2="12"/>
+                  <line x1="18" y1="12" x2="22" y2="12"/>
+                </svg>`;
+    }
+    function iconScan() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="4 7 4 4 7 4"/>
+                  <polyline points="17 4 20 4 20 7"/>
+                  <polyline points="20 17 20 20 17 20"/>
+                  <polyline points="7 20 4 20 4 17"/>
+                  <line x1="4" y1="12" x2="20" y2="12"/>
+                </svg>`;
+    }
+    function iconList() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"/>
+                  <line x1="8" y1="12" x2="21" y2="12"/>
+                  <line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/>
+                  <line x1="3" y1="12" x2="3.01" y2="12"/>
+                  <line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>`;
+    }
+    function iconTrash() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14H6L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4h6v2"/>
+                </svg>`;
+    }
+    function iconEyeOff() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>`;
+    }
+    function iconToggle() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="5" width="22" height="14" rx="7" ry="7"/>
+                  <circle cx="16" cy="12" r="3"/>
+                </svg>`;
+    }
+    function iconReset() {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>`;
+    }
+
+    // ── Build UI ──────────────────────────────────────────────────────────────
+    function buildUI() {
+        // Backdrop for modals
+        const backdrop = el('div', { id: `${EXT_NAME}-backdrop` });
+        backdrop.addEventListener('click', closeAllPanels);
+
+        // Main context menu (centered)
+        const menu = el('div', { id: `${EXT_NAME}-menu` });
+        menu.innerHTML = `
+            <div class="wh-menu-label">
+                <span>Widget Hider</span>
+                <button class="wh-menu-close" id="wh-menu-close">✕</button>
+            </div>
+            <div class="wh-menu-item" id="wh-action-toggle">
+                ${iconEye()}
+                <span id="wh-toggle-label">Скрыть виджеты</span>
+                <span class="wh-count-badge wh-hidden-badge" id="wh-hidden-count" style="display:none">0</span>
+            </div>
+            <div class="wh-menu-sep"></div>
+            <div class="wh-menu-item" id="wh-action-pick">
+                ${iconCrosshair()}
+                <span>Выбрать виджет</span>
+            </div>
+            <div class="wh-menu-item" id="wh-action-auto">
+                ${iconScan()}
+                <span>Авто-сканирование</span>
+            </div>
+            <div class="wh-menu-item" id="wh-action-manage">
+                ${iconList()}
+                <span>Управление списком</span>
+                <span class="wh-count-badge" id="wh-count">0</span>
+            </div>
+            <div class="wh-menu-sep"></div>
+            <div class="wh-menu-item" id="wh-action-fab">
+                ${iconToggle()}
+                <span id="wh-fab-label">Быстрая кнопка: вкл</span>
+            </div>
+            <div class="wh-menu-slider" id="wh-fab-size-row">
+                <span class="wh-slider-label">Размер: <span id="wh-fab-size-value">${fabSize}px</span></span>
+                <input type="range" id="wh-fab-size-slider" min="16" max="48" value="${fabSize}" step="2">
+            </div>
+            <div class="wh-menu-item" id="wh-action-reset-pos">
+                ${iconReset()}
+                <span>Сброс позиции кнопки</span>
+            </div>
+            <div class="wh-menu-sep"></div>
+            <div class="wh-menu-item" id="wh-action-clear">
+                ${iconTrash()}
+                <span>Сбросить всё</span>
+            </div>`;
+
+        // Manage panel
+        const managePanel = el('div', { id: `${EXT_NAME}-manage-panel` });
+        managePanel.innerHTML = `
+            <div class="wh-panel-header">
+                <span>Список виджетов</span>
+                <button class="wh-panel-close" id="wh-manage-close">✕</button>
+            </div>
+            <div class="wh-panel-body" id="wh-manage-list"></div>
+            <div class="wh-panel-footer">
+                <span class="wh-panel-hint">Нажмите на строку для подсветки</span>
+            </div>`;
+
+        // Auto-scan panel
+        const scanPanel = el('div', { id: `${EXT_NAME}-autoscan-panel` });
+        scanPanel.innerHTML = `
+            <div class="wh-panel-header">
+                <span>Найденные виджеты</span>
+                <button class="wh-panel-close" id="wh-scan-close">✕</button>
+            </div>
+            <div class="wh-panel-body" id="wh-scan-list">
+                <div class="wh-panel-empty">Идёт сканирование…</div>
+            </div>
+            <div class="wh-panel-footer">
+                <button class="wh-btn" id="wh-scan-confirm">Добавить выбранные</button>
+                <button class="wh-btn wh-btn-ghost" id="wh-scan-cancel">Отмена</button>
+            </div>`;
+
+        // Pick overlay + hint
+        const overlay = el('div', { id: `${EXT_NAME}-pick-overlay` });
+        const hint = el('div', { id: `${EXT_NAME}-pick-hint` });
+        hint.innerHTML = '🎯 Нажимайте на виджеты для выбора<br><small style="opacity:0.7">Escape — отмена</small>';
+
+        // FAB - Floating Action Button for quick toggle
+        const fab = el('div', { id: `${EXT_NAME}-fab` });
+        fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
+        fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
+        fab.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Don't toggle if we just finished dragging
+            if (fabMoved) return;
+            toggleHide();
+            updateFabState();
+        });
+
+        document.body.append(backdrop, menu, managePanel, scanPanel, overlay, hint, fab);
+
+        // Event listeners
+        document.getElementById('wh-menu-close').addEventListener('click', closeMenu);
+        document.getElementById('wh-action-toggle').addEventListener('click', () => { toggleHide(); closeMenu(); });
+        document.getElementById('wh-action-pick').addEventListener('click', () => { closeMenu(); enterPickMode(); });
+        document.getElementById('wh-action-auto').addEventListener('click', () => { closeMenu(); openScanPanel(); });
+        document.getElementById('wh-action-manage').addEventListener('click', () => { closeMenu(); openManagePanel(); });
+        document.getElementById('wh-action-clear').addEventListener('click', () => { closeMenu(); clearTargets(); });
+        document.getElementById('wh-action-fab').addEventListener('click', () => { toggleFabVisibility(); });
+        document.getElementById('wh-action-reset-pos').addEventListener('click', () => { resetFabPosition(); closeMenu(); });
+        
+        // FAB size slider
+        const sizeSlider = document.getElementById('wh-fab-size-slider');
+        if (sizeSlider) {
+            sizeSlider.addEventListener('input', (e) => {
+                fabSize = parseInt(e.target.value, 10);
+                saveJSON(STORAGE_FAB_SIZE, fabSize);
+                const sizeValue = document.getElementById('wh-fab-size-value');
+                if (sizeValue) sizeValue.textContent = `${fabSize}px`;
+                updateFabState();
+            });
+        }
+
+        document.getElementById('wh-manage-close').addEventListener('click', closeManagePanel);
+        document.getElementById('wh-scan-close').addEventListener('click', closeScanPanel);
+        document.getElementById('wh-scan-cancel').addEventListener('click', closeScanPanel);
+        document.getElementById('wh-scan-confirm').addEventListener('click', confirmScan);
+
+        overlay.addEventListener('click', handlePickClick);
+        overlay.addEventListener('touchend', handlePickTouch, { passive: false });
+
+        // Global keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (pickModeActive) { exitPickMode(); return; }
+                closeAllPanels();
+            }
+        });
+
+        injectIntoExtensionsMenu();
+    }
+
+    function closeAllPanels() {
+        closeMenu();
+        closeManagePanel();
+        closeScanPanel();
+    }
+
+    // ── Menu functions ────────────────────────────────────────────────────────
+    function openMainMenu() {
+        menuOpen = true;
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.add('active');
+        document.getElementById(`${EXT_NAME}-menu`).classList.add('open');
+        updateMenuState();
+    }
+
+    function closeMenu() {
+        menuOpen = false;
+        document.getElementById(`${EXT_NAME}-menu`).classList.remove('open');
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.remove('active');
+    }
+
+    function updateMenuState() {
+        const label = document.getElementById('wh-toggle-label');
+        const count = document.getElementById('wh-count');
+        const hiddenCount = document.getElementById('wh-hidden-count');
+        const entry = document.getElementById('wh-ext-entry');
+        const entryBadge = document.getElementById('wh-ext-badge');
+
+        if (label) label.textContent = isHidden ? 'Показать виджеты' : 'Скрыть виджеты';
+        if (count) {
+            count.textContent = hiddenTargets.length;
+            count.style.display = hiddenTargets.length ? '' : 'none';
+        }
+        if (hiddenCount) {
+            hiddenCount.textContent = hiddenTargets.length;
+            hiddenCount.style.display = (isHidden && hiddenTargets.length) ? '' : 'none';
+        }
+
+        // Update badge in extensions menu
+        if (entryBadge) {
+            entryBadge.textContent = hiddenTargets.length;
+            entryBadge.style.display = (isHidden && hiddenTargets.length) ? 'inline-flex' : 'none';
+        }
+
+        // Update icon
+        if (entry) {
+            const ico = entry.querySelector('i');
+            if (ico) ico.className = isHidden ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+        }
+    }
+
+    // ── Inject into ST Extensions Menu ────────────────────────────────────────
+    function injectIntoExtensionsMenu() {
+        tryInject();
+        setTimeout(tryInject, 1500);
+        setTimeout(tryInject, 4000);
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('#extensionsMenuButton, .fa-magic-wand-sparkles');
+            if (btn) setTimeout(tryInject, 80);
+        }, true);
+
+        const obs = new MutationObserver(() => tryInject());
+        obs.observe(document.body, { childList: true, subtree: true });
+
+        function tryInject() {
+            if (document.getElementById('wh-ext-entry')) return;
+
+            const containers = [
+                document.getElementById('extensionsMenu'),
+                document.querySelector('.extensions_block'),
+                document.querySelector('#extensionsMenuList'),
+                document.querySelector('.extensionsMenuList'),
+            ].filter(Boolean);
+
+            if (containers.length === 0) return;
+
+            const entry = el('div');
+            entry.id = 'wh-ext-entry';
+            entry.style.cssText = `
+                display:flex; align-items:center; gap:8px;
+                padding:8px 12px; cursor:pointer; color:inherit;
+                font-family:inherit; font-size:inherit;
+                border-radius:6px; transition:background .15s;`;
+            entry.innerHTML = `
+                <i class="fa-solid fa-eye-slash" style="width:18px;text-align:center;opacity:0.85;"></i>
+                <span>Widget Hider</span>
+                <span class="wh-hidden-badge" id="wh-ext-badge" style="display:none">0</span>`;
+            entry.addEventListener('mouseover', () => { entry.style.background = 'var(--SmartThemeEmColor, rgba(255,255,255,0.1))'; });
+            entry.addEventListener('mouseout', () => { entry.style.background = ''; });
+            entry.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const extMenu = containers[0];
+                if (extMenu) extMenu.closest('.popup, [class*="popup"]')?.classList.remove('visible');
+                openMainMenu();
+            });
+
+            // Insert at the beginning of the menu (first position)
+            if (containers[0].firstChild) {
+                containers[0].insertBefore(entry, containers[0].firstChild);
+            } else {
+                containers[0].appendChild(entry);
+            }
+            updateMenuState();
+        }
+    }
+
+    // ── Manage Panel ──────────────────────────────────────────────────────────
+    function openManagePanel() {
+        renderManageList();
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.add('active');
+        document.getElementById(`${EXT_NAME}-manage-panel`).classList.add('open');
+    }
+
+    function closeManagePanel() {
+        document.getElementById(`${EXT_NAME}-manage-panel`).classList.remove('open');
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.remove('active');
+        document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
+    }
+
+    function renderManageList() {
+        const list = document.getElementById('wh-manage-list');
+        list.innerHTML = '';
+
+        if (hiddenTargets.length === 0) {
+            list.innerHTML = '<div class="wh-panel-empty">Список пуст.<br>Добавьте виджеты через «Выбрать» или «Авто-сканирование».</div>';
+            return;
+        }
+
+        hiddenTargets.forEach((sel, idx) => {
+            const row = el('div');
+            row.className = 'wh-manage-row';
+
+            let label = sel;
+            try {
+                const found = document.querySelector(sel);
+                if (found) {
+                    const text = (found.title || found.getAttribute('aria-label') || found.textContent || '').trim().slice(0, 35);
+                    if (text) label = `${sel}  —  "${text}"`;
+                }
+            } catch(_) {}
+
+            row.innerHTML = `
+                <div class="wh-manage-sel" title="${escapeHtml(sel)}">${escapeHtml(label)}</div>
+                <button class="wh-manage-del" title="Убрать">✕</button>`;
+
+            row.addEventListener('click', (e) => {
+                if (e.target.classList.contains('wh-manage-del')) return;
+                document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
+                highlightElement(sel);
+            });
+
+            row.querySelector('.wh-manage-del').addEventListener('click', () => {
+                unhighlightElement(sel);
+                hiddenTargets.splice(idx, 1);
+                saveJSON(STORAGE_KEY, hiddenTargets);
+                if (isHidden) {
+                    try { document.querySelectorAll(sel).forEach(n => n.classList.remove('wh-hidden-widget')); } catch(_) {}
+                }
+                updateMenuState();
+                renderManageList();
+            });
+
+            list.appendChild(row);
+        });
+    }
+
+    function highlightElement(sel) {
+        try { document.querySelectorAll(sel).forEach(n => n.classList.add('wh-highlighted')); } catch(_) {}
+    }
+
+    function unhighlightElement(sel) {
+        try { document.querySelectorAll(sel).forEach(n => n.classList.remove('wh-highlighted')); } catch(_) {}
+    }
+
+    // ── Auto-scan Panel ───────────────────────────────────────────────────────
+    let scanCandidates = [];
+
+    function openScanPanel() {
+        scanCandidates = collectScanCandidates();
+        renderScanPanel();
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.add('active');
+        document.getElementById(`${EXT_NAME}-autoscan-panel`).classList.add('open');
+    }
+
+    function closeScanPanel() {
+        document.getElementById(`${EXT_NAME}-autoscan-panel`).classList.remove('open');
+        document.getElementById(`${EXT_NAME}-backdrop`).classList.remove('active');
+        document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
+        scanCandidates = [];
+    }
+
+    function collectScanCandidates() {
+        const seen = new Set();
+        const found = [];
+
+        function add(node) {
+            if (isCoreElement(node)) return;
+            const sel = buildSelector(node);
+            if (!sel || seen.has(sel)) return;
+            seen.add(sel);
+            found.push({ node, sel, checked: !hiddenTargets.includes(sel) });
+        }
+
+        document.querySelectorAll('body > *').forEach(node => {
+            const s = window.getComputedStyle(node);
+            if (s.position === 'fixed' || s.position === 'absolute') add(node);
+        });
+
+        document.querySelectorAll('[style*="position: fixed"],[style*="position:fixed"]').forEach(add);
+
+        ['[id$="-widget"]','[id$="-panel"]','[id*="extension"]','.extension-','.ext-','.floating-'].forEach(pat => {
+            try {
+                document.querySelectorAll(pat).forEach(node => {
+                    const s = window.getComputedStyle(node);
+                    if (['fixed','absolute'].includes(s.position)) add(node);
+                });
+            } catch(_) {}
+        });
+
+        return found;
+    }
+
+    function renderScanPanel() {
+        const list = document.getElementById('wh-scan-list');
+        list.innerHTML = '';
+
+        if (scanCandidates.length === 0) {
+            list.innerHTML = '<div class="wh-panel-empty">Плавающих виджетов не обнаружено.</div>';
+            return;
+        }
+
+        scanCandidates.forEach((c, idx) => {
+            const alreadyAdded = hiddenTargets.includes(c.sel);
+            const row = el('div');
+            row.className = 'wh-scan-row' + (alreadyAdded ? ' wh-scan-already' : '');
+
+            let label = c.sel;
+            const text = (c.node.title || c.node.getAttribute('aria-label') || c.node.textContent || '').trim().slice(0, 40);
+            if (text) label += `  — "${text}"`;
+
+            row.innerHTML = `
+                <div class="wh-scan-check">
+                    <input type="checkbox" data-idx="${idx}" ${c.checked && !alreadyAdded ? 'checked' : ''} ${alreadyAdded ? 'disabled' : ''}>
+                    <span class="wh-scan-sel" title="${escapeHtml(c.sel)}">${escapeHtml(label)}</span>
+                    ${alreadyAdded ? '<em class="wh-scan-note">(уже добавлен)</em>' : ''}
+                </div>`;
+
+            const cb = row.querySelector('input');
+            
+            // Handle checkbox change
+            cb.addEventListener('change', (e) => { 
+                e.stopPropagation();
+                scanCandidates[idx].checked = cb.checked; 
+            });
+            
+            // Handle checkbox click - prevent row click from interfering
+            cb.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+
+            // Handle row click - toggle checkbox and highlight
+            row.addEventListener('click', (e) => {
+                // Don't toggle if clicked on checkbox itself or if already added
+                if (e.target.tagName === 'INPUT' || alreadyAdded) return;
+                
+                // Toggle checkbox
+                cb.checked = !cb.checked;
+                scanCandidates[idx].checked = cb.checked;
+                
+                // Highlight element
+                document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
+                c.node.classList.add('wh-highlighted');
+            });
+
+            list.appendChild(row);
+        });
+    }
+
+    function confirmScan() {
+        let added = 0;
+        scanCandidates.forEach(c => {
+            if (c.checked && !hiddenTargets.includes(c.sel)) {
+                hiddenTargets.push(c.sel);
+                added++;
+            }
+        });
+        saveJSON(STORAGE_KEY, hiddenTargets);
+        updateMenuState();
+        closeScanPanel();
+        toastMsg(added > 0 ? `Добавлено: ${added}. Всего: ${hiddenTargets.length}` : 'Ничего не добавлено');
+    }
+
+    // ── Pick Mode ─────────────────────────────────────────────────────────────
+    let lastHovered = null;
+
+    function enterPickMode() {
+        pickModeActive = true;
+
+        document.getElementById(`${EXT_NAME}-pick-overlay`).classList.add('active');
+        document.getElementById(`${EXT_NAME}-pick-hint`).style.display = 'block';
+
+        if (!isMobile) {
+            document.addEventListener('mousemove', onPickHover, true);
+        }
+    }
+
+    function exitPickMode() {
+        pickModeActive = false;
+        document.getElementById(`${EXT_NAME}-pick-overlay`).classList.remove('active');
+        document.getElementById(`${EXT_NAME}-pick-hint`).style.display = 'none';
+        document.removeEventListener('mousemove', onPickHover, true);
+        document.querySelectorAll('.widget-hider-pickable').forEach(n => n.classList.remove('widget-hider-pickable'));
+        lastHovered = null;
+    }
+
+    function onPickHover(e) {
+        const overlay = document.getElementById(`${EXT_NAME}-pick-overlay`);
+        overlay.style.pointerEvents = 'none';
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        overlay.style.pointerEvents = '';
+        if (!target || isCoreElement(target)) return;
+        const widget = findWidgetRoot(target);
+        if (!widget || isCoreElement(widget)) return;
+        if (lastHovered && lastHovered !== widget) lastHovered.classList.remove('widget-hider-pickable');
+        widget.classList.add('widget-hider-pickable');
+        lastHovered = widget;
+    }
+
+    function handlePickClick(e) {
+        if (!pickModeActive) return;
+        e.stopPropagation();
+        e.preventDefault();
+        processPickAt(e.clientX, e.clientY);
+    }
+
+    function handlePickTouch(e) {
+        if (!pickModeActive) return;
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        if (touch) processPickAt(touch.clientX, touch.clientY);
+    }
+
+    function processPickAt(x, y) {
+        const overlay = document.getElementById(`${EXT_NAME}-pick-overlay`);
+        overlay.style.pointerEvents = 'none';
+        const target = document.elementFromPoint(x, y);
+        overlay.style.pointerEvents = '';
+
+        if (!target || isCoreElement(target)) {
+            exitPickMode();
+            return;
+        }
+
+        const widget = findWidgetRoot(target);
+        if (!widget || isCoreElement(widget)) {
+            exitPickMode();
+            return;
+        }
+
+        const sel = buildSelector(widget);
+        if (!sel) {
+            exitPickMode();
+            return;
+        }
+
+        // Single pick - add immediately
+        if (!hiddenTargets.includes(sel)) {
+            hiddenTargets.push(sel);
+            saveJSON(STORAGE_KEY, hiddenTargets);
+        }
+        if (isHidden) widget.classList.add('wh-hidden-widget');
+        exitPickMode();
+        updateMenuState();
+        toastMsg(`Виджет добавлен (${hiddenTargets.length} шт.)`);
+    }
+
+    // ── Hide / Show ───────────────────────────────────────────────────────────
+    function toggleHide() {
+        isHidden = !isHidden;
+        saveJSON(STORAGE_HIDDEN, isHidden);
+        applyHiddenState();
+        updateMenuState();
+    }
+
+    function applyHiddenState() {
+        hiddenTargets.forEach(sel => {
+            try {
+                document.querySelectorAll(sel).forEach(node => {
+                    node.classList.toggle('wh-hidden-widget', isHidden);
+                });
+            } catch (_) {}
+        });
+    }
+
+    // ── Clear ─────────────────────────────────────────────────────────────────
+    function clearTargets() {
+        document.querySelectorAll('.wh-hidden-widget').forEach(n => n.classList.remove('wh-hidden-widget'));
+        hiddenTargets = [];
+        saveJSON(STORAGE_KEY, hiddenTargets);
+        isHidden = false;
+        saveJSON(STORAGE_HIDDEN, false);
+        updateMenuState();
+        updateFabState();
+        toastMsg('Список виджетов очищен');
+    }
+
+    // ── FAB (Floating Action Button) ──────────────────────────────────────────
+    function toggleFabVisibility() {
+        fabVisible = !fabVisible;
+        saveJSON(STORAGE_FAB_VISIBLE, fabVisible);
+        updateFabState();
+        const fabLabel = document.getElementById('wh-fab-label');
+        if (fabLabel) fabLabel.textContent = `Быстрая кнопка: ${fabVisible ? 'вкл' : 'выкл'}`;
+    }
+    
+    function resetFabPosition() {
+        fabPosition = null;
+        saveJSON(STORAGE_FAB_POS, null);
+        applyFabPosition();
+        toastMsg('Позиция кнопки сброшена');
+    }
+    
+    function applyFabPosition() {
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (!fab) return;
+        
+        if (fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
+            // Custom position - use left/top
+            fab.style.right = 'auto';
+            fab.style.bottom = 'auto';
+            fab.style.left = `${fabPosition.x}px`;
+            fab.style.top = `${fabPosition.y}px`;
+        } else {
+            // Default position
+            fab.style.left = 'auto';
+            fab.style.top = 'auto';
+            fab.style.right = '20px';
+            fab.style.bottom = '120px';
+        }
+    }
+    
+    function initFabDrag() {
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (!fab) return;
+        
+        // Mouse events
+        fab.addEventListener('mousedown', onFabDragStart);
+        document.addEventListener('mousemove', onFabDragMove);
+        document.addEventListener('mouseup', onFabDragEnd);
+        
+        // Touch events
+        fab.addEventListener('touchstart', onFabTouchStart, { passive: false });
+        document.addEventListener('touchmove', onFabTouchMove, { passive: false });
+        document.addEventListener('touchend', onFabTouchEnd);
+    }
+    
+    function onFabDragStart(e) {
+        if (e.button !== 0) return; // Only left click
+        e.preventDefault();
+        startFabDrag(e.clientX, e.clientY);
+    }
+    
+    function onFabTouchStart(e) {
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        startFabDrag(touch.clientX, touch.clientY);
+    }
+    
+    function startFabDrag(x, y) {
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (!fab) return;
+        
+        fabDragging = true;
+        fabMoved = false;
+        fabDragStart = { x, y };
+        
+        const rect = fab.getBoundingClientRect();
+        fabStartPos = { x: rect.left, y: rect.top };
+        
+        fab.classList.add('wh-fab-dragging');
+    }
+    
+    function onFabDragMove(e) {
+        if (!fabDragging) return;
+        e.preventDefault();
+        moveFabTo(e.clientX, e.clientY);
+    }
+    
+    function onFabTouchMove(e) {
+        if (!fabDragging) return;
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        moveFabTo(touch.clientX, touch.clientY);
+    }
+    
+    function moveFabTo(x, y) {
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (!fab) return;
+        
+        const dx = x - fabDragStart.x;
+        const dy = y - fabDragStart.y;
+        
+        // Consider it moved if dragged more than 5px
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            fabMoved = true;
+        }
+        
+        let newX = fabStartPos.x + dx;
+        let newY = fabStartPos.y + dy;
+        
+        // Constrain to viewport
+        const fabRect = fab.getBoundingClientRect();
+        const maxX = window.innerWidth - fabRect.width;
+        const maxY = window.innerHeight - fabRect.height;
+        
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        
+        fab.style.right = 'auto';
+        fab.style.bottom = 'auto';
+        fab.style.left = `${newX}px`;
+        fab.style.top = `${newY}px`;
+    }
+    
+    function onFabDragEnd(e) {
+        endFabDrag();
+    }
+    
+    function onFabTouchEnd(e) {
+        endFabDrag();
+    }
+    
+    function endFabDrag() {
+        if (!fabDragging) return;
+        
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (fab) {
+            fab.classList.remove('wh-fab-dragging');
+            
+            // Save position if moved
+            if (fabMoved) {
+                const rect = fab.getBoundingClientRect();
+                fabPosition = { x: rect.left, y: rect.top };
+                saveJSON(STORAGE_FAB_POS, fabPosition);
+            }
+        }
+        
+        fabDragging = false;
+        
+        // If moved, prevent click from firing
+        if (fabMoved) {
+            setTimeout(() => { fabMoved = false; }, 100);
+        }
+    }
+
+    function updateFabState() {
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (!fab) return;
+
+        // Update FAB visibility
+        fab.classList.toggle('wh-fab-enabled', fabVisible);
+        
+        // Apply custom size via CSS variable
+        fab.style.setProperty('--wh-fab-size', `${fabSize}px`);
+        
+        // Update FAB icon based on hidden state
+        const iconSpan = fab.querySelector('.wh-fab-icon');
+        if (iconSpan) {
+            iconSpan.innerHTML = isHidden ? iconEye() : iconEyeOff();
+        }
+        
+        // Update FAB active state (when widgets are hidden)
+        fab.classList.toggle('wh-fab-active', isHidden);
+        
+        // Update menu label
+        const fabLabel = document.getElementById('wh-fab-label');
+        if (fabLabel) fabLabel.textContent = `Быстрая кнопка: ${fabVisible ? 'вкл' : 'выкл'}`;
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function el(tag, attrs = {}) {
+        const e = document.createElement(tag);
+        Object.assign(e, attrs);
+        return e;
+    }
+
+    function loadJSON(key, fallback) {
+        try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+        catch(_) { return fallback; }
+    }
+
+    function saveJSON(key, val) {
+        try { localStorage.setItem(key, JSON.stringify(val)); } catch(_) {}
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function isCoreElement(node) {
+        if (!node || node === document.body || node === document.documentElement) return true;
+        return CORE_SELECTORS.some(sel => {
+            try { return node.matches(sel) || node.closest(sel); } catch(_) { return false; }
+        });
+    }
+
+    function findWidgetRoot(target) {
+        let node = target;
+        while (node && node.parentElement && node.parentElement !== document.body) {
+            node = node.parentElement;
+        }
+        return node || target;
+    }
+
+    function buildSelector(node) {
+        if (node.id) return `#${CSS.escape(node.id)}`;
+        if (node.className && typeof node.className === 'string') {
+            const cls = node.className.trim().split(/\s+/)
+                .filter(c => c && !c.startsWith('wh-') && !c.startsWith('widget-hider'))
+                .slice(0, 2);
+            if (cls.length) return `${node.tagName.toLowerCase()}.${cls.map(c => CSS.escape(c)).join('.')}`;
+        }
+        const parent = node.parentElement;
+        if (!parent) return null;
+        const idx = Array.from(parent.children).indexOf(node) + 1;
+        return `${node.tagName.toLowerCase()}:nth-child(${idx})`;
+    }
+
+    function toastMsg(msg) {
+        if (window.toastr) { window.toastr.info(msg, 'Widget Hider', { timeOut: 3000 }); return; }
+        const toast = el('div');
+        toast.style.cssText = `
+            position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:9999999;
+            background:var(--SmartThemeBlurTintColor, rgba(0,0,0,0.9));
+            border:1px solid var(--SmartThemeBorderColor, #555);
+            color:var(--SmartThemeBodyColor, #ccc);
+            padding:14px 24px;border-radius:10px;font-size:14px;
+            font-family:var(--mainFontFamily, Georgia, serif);
+            pointer-events:none;text-align:center;
+            animation:wh-toast-in .2s ease;max-width:90vw;`;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    function init() {
+        buildUI();
+        initFabDrag();
+        applyFabPosition();
+        updateMenuState();
+        updateFabState();
+        if (isHidden) applyHiddenState();
+        
+        // Re-apply after page settles
+        setTimeout(() => {
+            if (isHidden) applyHiddenState();
+            updateMenuState();
+            updateFabState();
+            applyFabPosition();
+        }, 2000);
+        
+        console.log('Widget Hider v2.2 - Ready (with draggable FAB)');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
