@@ -578,16 +578,14 @@
     let pickPanelCandidates = [];
 
     function enterPickMode() {
-        // На мобильных устройствах используем панель выбора вместо overlay
-        if (isMobile) {
-            openPickPanel();
-            return;
-        }
-        
         pickModeActive = true;
         document.getElementById(`${EXT_NAME}-pick-overlay`).classList.add('active');
         document.getElementById(`${EXT_NAME}-pick-hint`).style.display = 'block';
-        document.addEventListener('mousemove', onPickHover, true);
+        
+        // На desktop добавляем hover эффект
+        if (!isMobile) {
+            document.addEventListener('mousemove', onPickHover, true);
+        }
     }
 
     function exitPickMode() {
@@ -1064,7 +1062,7 @@
             applyFabPosition();
         }, 2000);
         
-        console.log('Widget Hider v2.3 - Ready (mobile pick panel + draggable FAB)');
+        console.log('Widget Hider v2.4 - Ready (overlay pick mode fixed + mobile hint at bottom)');
     }
 
     if (document.readyState === 'loading') {

@@ -391,7 +391,7 @@
 }
 #widget-hider-pick-overlay.active { display: block; }
 
-/* ── Pick hint - CENTERED ────────────────────────────────────────────────── */
+/* ── Pick hint - CENTERED on desktop, BOTTOM on mobile ──────────────────── */
 #widget-hider-pick-hint {
     position: fixed;
     top: 50%;
@@ -593,7 +593,12 @@
         text-align: center;
     }
     
+    /* На мобильных hint опускается ниже - к нижней части экрана */
     #widget-hider-pick-hint {
+        top: auto;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
         padding: 18px 22px;
         font-size: 14px;
         max-width: 88vw;
