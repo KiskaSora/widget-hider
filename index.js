@@ -225,28 +225,11 @@
         `;
 
         // FAB - Floating Action Button for quick toggle
-        // Используем inline стили чтобы гарантировать видимость даже если CSS не загрузился
+        // Минималистичная кнопка - только иконка глаза, слегка видная
         const fab = el('div', { id: `${EXT_NAME}-fab` });
-        fab.innerHTML = `<span class="wh-fab-icon" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;color:#fff;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.9));">${iconEyeOff()}</span>`;
+        fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
         fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
-        // Критические inline стили для гарантированной видимости
-        fab.style.cssText = `
-            position: fixed !important;
-            bottom: 100px !important;
-            right: 16px !important;
-            z-index: 999999 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 12px !important;
-            background: rgba(0,0,0,0.6) !important;
-            border: 2px solid rgba(255,255,255,0.3) !important;
-            border-radius: 50% !important;
-            cursor: pointer !important;
-            touch-action: none !important;
-            user-select: none !important;
-            -webkit-tap-highlight-color: transparent !important;
-        `;
+        // Минимальные inline стили - основные стили в CSS
         fab.addEventListener('click', (e) => {
             e.stopPropagation();
             // Don't toggle if we just finished dragging
@@ -1029,28 +1012,18 @@
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
 
-        // Update FAB visibility - НО теперь мы используем inline стили,
-        // поэтому просто обновляем display напрямую
-        if (fabVisible) {
-            fab.style.display = 'flex';
-            fab.style.opacity = isHidden ? '0.5' : '0.8';
-        } else {
-            fab.style.display = 'none';
-        }
-        
-        // CSS класс оставляем для совместимости
+        // Управляем видимостью через CSS классы - прозрачность задаётся в CSS
         fab.classList.toggle('wh-fab-enabled', fabVisible);
+        fab.classList.toggle('wh-fab-active', isHidden);
         
-        // Apply custom size - обновляем inline стиль иконки
+        // Apply custom size - обновляем размер иконки
         const iconSpan = fab.querySelector('.wh-fab-icon');
         if (iconSpan) {
             iconSpan.style.width = `${fabSize}px`;
             iconSpan.style.height = `${fabSize}px`;
+            // Меняем иконку: глаз открыт когда виджеты скрыты (показать), закрыт когда видны (скрыть)
             iconSpan.innerHTML = isHidden ? iconEye() : iconEyeOff();
         }
-        
-        // Update FAB active state (when widgets are hidden)
-        fab.classList.toggle('wh-fab-active', isHidden);
         
         // Update menu label
         const fabLabel = document.getElementById('wh-fab-label');

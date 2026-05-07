@@ -691,22 +691,22 @@
     }
 }
 
-/* ── FAB (Floating Action Button) ────────────────────────────────────────── */
+/* ── FAB (Floating Action Button) - Слегка видная кнопка-глаз ────────────── */
 #widget-hider-fab {
     --wh-fab-size: 28px;
     position: fixed;
     bottom: 120px;
     right: 20px;
     z-index: 999999;
-    padding: 6px;
+    padding: 8px;
     background: transparent;
     border: none;
-    border-radius: 0;
+    border-radius: 50%;
     display: none;
     align-items: center;
     justify-content: center;
     cursor: grab;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.25s ease, transform 0.15s ease;
     opacity: 1;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
@@ -715,38 +715,41 @@
 
 #widget-hider-fab.wh-fab-dragging {
     cursor: grabbing;
-    opacity: 1 !important;
+    opacity: 0.9 !important;
+    transform: scale(1.1);
 }
 
-/* FAB visible only when enabled class is set by JS */
+/* FAB visible only when enabled - слегка видная (призрачная) */
 #widget-hider-fab.wh-fab-enabled {
     display: flex;
-    opacity: 0.5;
+    opacity: 0.25;
 }
 
-/* FAB becomes fully visible on hover (desktop) */
+/* FAB becomes more visible on hover (desktop) */
 #widget-hider-fab.wh-fab-enabled:hover {
-    opacity: 1;
+    opacity: 0.7;
+    transform: scale(1.05);
 }
 
-/* FAB active state (widgets are hidden) - MORE TRANSPARENT */
+/* FAB active state (widgets are hidden) - ещё более прозрачная */
 #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-    opacity: 0.3;
+    opacity: 0.15;
 }
 
 #widget-hider-fab.wh-fab-active.wh-fab-enabled:hover {
-    opacity: 0.8;
+    opacity: 0.6;
 }
 
-/* FAB icon - only the eye icon, no background */
+/* FAB icon - только иконка глаза с тенью для видимости */
 .wh-fab-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: var(--wh-fab-size, 24px);
     height: var(--wh-fab-size, 24px);
-    color: var(--SmartThemeBodyColor, #ccc);
-    transition: color 0.2s ease;
+    color: var(--SmartThemeBodyColor, rgba(255, 255, 255, 0.9));
+    transition: color 0.2s ease, filter 0.2s ease;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
 }
 
 .wh-fab-icon svg {
@@ -757,6 +760,7 @@
 
 #widget-hider-fab:hover .wh-fab-icon {
     color: var(--SmartThemeUserMesColorName, #fff);
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
 }
 
 #widget-hider-fab.wh-fab-active .wh-fab-icon {
