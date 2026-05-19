@@ -855,47 +855,30 @@
         const vw = window.innerWidth || document.documentElement.clientWidth;
         const vh = window.innerHeight || document.documentElement.clientHeight;
         
-        // isMobile учитывает UA (Android/iPhone/...) И viewport — надёжнее чем только vw
-        if (!isMobile && fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
-            // Desktop: Custom position - use left/top, clamp to viewport
-            const fabRect = fab.getBoundingClientRect();
-            const fabW = fabRect.width || 48;
-            const fabH = fabRect.height || 48;
-            
+        if (fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
+            // Восстанавливаем сохранённую позицию — и на мобильном, и на ПК
+            const fabW = fab.offsetWidth || 44;
+            const fabH = fab.offsetHeight || 44;
             const margin = 4;
-            const maxX = Math.max(margin, vw - fabW - margin);
-            const maxY = Math.max(margin, vh - fabH - margin);
-            
-            let x = fabPosition.x;
-            let y = fabPosition.y;
-            
-            const wasOutOfBounds = (x > maxX || y > maxY || x < 0 || y < 0);
-            
-            x = Math.max(margin, Math.min(x, maxX));
-            y = Math.max(margin, Math.min(y, maxY));
-            
-            fab.style.right = 'auto';
+            let x = Math.max(margin, Math.min(fabPosition.x, vw - fabW - margin));
+            let y = Math.max(margin, Math.min(fabPosition.y, vh - fabH - margin));
+            fab.style.right  = 'auto';
             fab.style.bottom = 'auto';
-            fab.style.left = `${x}px`;
-            fab.style.top = `${y}px`;
-            
-            if (wasOutOfBounds) {
-                fabPosition = { x, y };
-                saveJSON(STORAGE_FAB_POS, fabPosition);
-            }
+            fab.style.left   = x + 'px';
+            fab.style.top    = y + 'px';
         } else {
-            // Mobile или нет сохранённой позиции
+            // Нет сохранённой позиции — дефолт
             fab.style.right  = 'auto';
             fab.style.bottom = 'auto';
             fab.style.left   = '12px';
             fab.style.top    = Math.round((window.innerHeight || 500) * 0.45) + 'px';
-            if (isMobile) {
-                fab.style.width         = '52px';
-                fab.style.height        = '52px';
-                fab.style.position      = 'fixed';
-                fab.style.zIndex        = '2147483647';
-                fab.style.borderRadius  = '50%';
-            }
+        }
+        if (isMobile) {
+            fab.style.width        = '52px';
+            fab.style.height       = '52px';
+            fab.style.position     = 'fixed';
+            fab.style.zIndex       = '2147483647';
+            fab.style.borderRadius = '50%';
         }
     }
     
@@ -1102,9 +1085,13 @@
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
 
-        // ВСЕГДА display:flex — inline стиль, не CSS (надёжнее на любых устройствах)
+        // Если выключен — скрываем полностью, не полупрозрачно
+        if (!fabVisible) {
+            fab.style.display = 'none';
+            return;
+        }
         fab.style.display = 'flex';
-        fab.classList.toggle('wh-fab-disabled', !fabVisible);
+        fab.classList.remove('wh-fab-disabled');
         fab.classList.toggle('wh-fab-active', isHidden);
 
         // Icon
