@@ -851,6 +851,8 @@
     function applyFabPosition() {
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
+        // Если кнопка выключена — не трогаем display
+        if (!fabVisible) { fab.style.display = 'none'; return; }
         
         const vw = window.innerWidth || document.documentElement.clientWidth;
         const vh = window.innerHeight || document.documentElement.clientHeight;

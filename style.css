@@ -716,10 +716,9 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-#widget-hider-fab:hover { opacity: 0.85; transform: scale(1.1); }
-#widget-hider-fab.wh-fab-active { opacity: 0.9; }
-#widget-hider-fab.wh-fab-active svg { filter: drop-shadow(0 0 4px currentColor); }
-#widget-hider-fab.wh-fab-disabled { opacity: 0.1; pointer-events: none; }
+#widget-hider-fab:hover { opacity: 0.6; transform: scale(1.05); }
+#widget-hider-fab.wh-fab-active { opacity: 0.5; }
+#widget-hider-fab.wh-fab-disabled { display: none !important; }
 
 /* ── FAB icon ─────────────────────────────────────────────────────────────── */
 .wh-fab-icon {
