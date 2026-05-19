@@ -44,10 +44,10 @@
     let fabMoved = false;
 
     // ── Detect mobile on resize ───────────────────────────────────────────────
+    const UA_IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     let resizeTimer = null;
     window.addEventListener('resize', () => {
-        isMobile = window.innerWidth < 768;
-        // Дебаунсим, чтобы не дёргать FAB на каждый пиксель ресайза
+        isMobile = UA_IS_MOBILE || window.innerWidth < 768;
         if (resizeTimer) clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
             applyFabPosition();
@@ -229,16 +229,19 @@
         const fab = el('div', { id: `${EXT_NAME}-fab` });
         fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
         fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
-        // Минимальные inline стили - основные стили в CSS
         fab.addEventListener('click', (e) => {
             e.stopPropagation();
-            // Don't toggle if we just finished dragging
             if (fabMoved) return;
+            if (isMobile) return; // на мобильных — только через touchend
             toggleHide();
             updateFabState();
         });
 
-        document.body.append(backdrop, menu, managePanel, scanPanel, pickPanel, overlay, hint, fab);
+        // Аппендим в body всё кроме FAB
+        document.body.append(backdrop, menu, managePanel, scanPanel, pickPanel, overlay, hint);
+        // FAB аппендим в documentElement (<html>) — так он не зависит от
+        // transform/zoom/overflow на body которые ST может применять на мобильных
+        document.documentElement.appendChild(fab);
 
         // Event listeners
         document.getElementById('wh-menu-close').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); });
@@ -852,11 +855,8 @@
         const vw = window.innerWidth || document.documentElement.clientWidth;
         const vh = window.innerHeight || document.documentElement.clientHeight;
         
-        // На мобильных (viewport < 768px) ВСЕГДА используем дефолтную позицию из CSS
-        // потому что сохранённая с ПК позиция почти гарантированно будет за экраном
-        const isMobileViewport = vw < 768;
-        
-        if (!isMobileViewport && fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
+        // isMobile учитывает UA (Android/iPhone/...) И viewport — надёжнее чем только vw
+        if (!isMobile && fabPosition && fabPosition.x !== undefined && fabPosition.y !== undefined) {
             // Desktop: Custom position - use left/top, clamp to viewport
             const fabRect = fab.getBoundingClientRect();
             const fabW = fabRect.width || 48;
@@ -884,29 +884,117 @@
                 saveJSON(STORAGE_FAB_POS, fabPosition);
             }
         } else {
-            // Mobile или нет сохранённой позиции — дефолтная позиция слева (как в CSS)
-            // На desktop: left: 14px, top: 180px
-            // На mobile: left: 12px, bottom: 140px (управляется из CSS)
-            fab.style.right = 'auto';
-            fab.style.bottom = isMobileViewport ? '140px' : 'auto';
-            fab.style.left = isMobileViewport ? '12px' : '14px';
-            fab.style.top = isMobileViewport ? 'auto' : '180px';
+            // Mobile или нет сохранённой позиции
+            fab.style.right  = 'auto';
+            fab.style.bottom = 'auto';
+            fab.style.left   = '12px';
+            fab.style.top    = Math.round((window.innerHeight || 500) * 0.45) + 'px';
+            if (isMobile) {
+                fab.style.width         = '52px';
+                fab.style.height        = '52px';
+                fab.style.position      = 'fixed';
+                fab.style.zIndex        = '2147483647';
+                fab.style.borderRadius  = '50%';
+            }
         }
     }
     
     function initFabDrag() {
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
-        
-        // Mouse events
-        fab.addEventListener('mousedown', onFabDragStart);
-        document.addEventListener('mousemove', onFabDragMove);
-        document.addEventListener('mouseup', onFabDragEnd);
-        
-        // Touch events
-        fab.addEventListener('touchstart', onFabTouchStart, { passive: false });
-        document.addEventListener('touchmove', onFabTouchMove, { passive: false });
-        document.addEventListener('touchend', onFabTouchEnd);
+
+        // ── Точная копия паттерна Asta setupDrag ─────────────────────────────
+        let d = false, dm = false, sx = 0, sy = 0, sl = 0, st = 0, rafId = null;
+        const THR = 8;
+
+        const xy = (e) => {
+            if (e.touches?.[0])        return { x: e.touches[0].clientX,        y: e.touches[0].clientY };
+            if (e.changedTouches?.[0]) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        const applyMove = (nx, ny) => {
+            const cx = Math.max(0, Math.min(nx, window.innerWidth  - fab.offsetWidth));
+            const cy = Math.max(0, Math.min(ny, window.innerHeight - fab.offsetHeight));
+            fab.style.left   = cx + 'px';
+            fab.style.top    = cy + 'px';
+            fab.style.right  = 'auto';
+            fab.style.bottom = 'auto';
+        };
+
+        // touchstart: passive:true — НЕ блокируем скролл заранее (как в Asta)
+        fab.addEventListener('touchstart', (e) => {
+            d = true; dm = false;
+            const c = xy(e);
+            sx = c.x; sy = c.y;
+            const r = fab.getBoundingClientRect();
+            sl = r.left; st = r.top;
+            fab.style.left = sl + 'px'; fab.style.top = st + 'px';
+            fab.style.right = 'auto'; fab.style.bottom = 'auto';
+        }, { passive: true });
+
+        // touchmove: passive:false — preventDefault только когда уже тащим
+        fab.addEventListener('touchmove', (e) => {
+            if (!d) return;
+            const c = xy(e), dx = c.x - sx, dy = c.y - sy;
+            if (Math.abs(dx) > THR || Math.abs(dy) > THR) dm = true;
+            if (!dm) return;
+            e.preventDefault(); // блокируем скролл только при drag
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => applyMove(sl + dx, st + dy));
+        }, { passive: false });
+
+        // touchend: тап если не было drag
+        fab.addEventListener('touchend', (e) => {
+            if (!d) return;
+            d = false;
+            if (!dm) {
+                e.preventDefault();
+                // Тап — переключаем
+                toggleHide();
+                updateFabState();
+            } else {
+                // Drag завершён — сохраняем позицию
+                const r = fab.getBoundingClientRect();
+                fabPosition = { x: Math.round(r.left), y: Math.round(r.top) };
+                saveJSON(STORAGE_FAB_POS, fabPosition);
+            }
+            dm = false; rafId = null;
+        }, { passive: false });
+
+        // Mouse events (desktop)
+        fab.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            d = true; dm = false;
+            sx = e.clientX; sy = e.clientY;
+            const r = fab.getBoundingClientRect();
+            sl = r.left; st = r.top;
+            fab.style.left = sl + 'px'; fab.style.top = st + 'px';
+            fab.style.right = 'auto'; fab.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!d) return;
+            const dx = e.clientX - sx, dy = e.clientY - sy;
+            if (Math.abs(dx) > THR || Math.abs(dy) > THR) dm = true;
+            if (!dm) return;
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => applyMove(sl + dx, st + dy));
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!d) return;
+            d = false;
+            if (dm) {
+                const r = fab.getBoundingClientRect();
+                fabPosition = { x: Math.round(r.left), y: Math.round(r.top) };
+                saveJSON(STORAGE_FAB_POS, fabPosition);
+            } else {
+                toggleHide();
+                updateFabState();
+            }
+            dm = false; rafId = null;
+        });
     }
     
     function onFabDragStart(e) {
@@ -945,7 +1033,7 @@
     function onFabTouchMove(e) {
         if (!fabDragging) return;
         if (e.touches.length !== 1) return;
-        e.preventDefault();
+        e.preventDefault(); // нужен для блокировки скролла во время drag
         const touch = e.touches[0];
         moveFabTo(touch.clientX, touch.clientY);
     }
@@ -1014,20 +1102,19 @@
         const fab = document.getElementById(`${EXT_NAME}-fab`);
         if (!fab) return;
 
-        // Управляем видимостью через CSS классы - прозрачность задаётся в CSS
-        fab.classList.toggle('wh-fab-enabled', fabVisible);
+        // ВСЕГДА display:flex — inline стиль, не CSS (надёжнее на любых устройствах)
+        fab.style.display = 'flex';
+        fab.classList.toggle('wh-fab-disabled', !fabVisible);
         fab.classList.toggle('wh-fab-active', isHidden);
-        
-        // Apply custom size - обновляем размер иконки
+
+        // Icon
         const iconSpan = fab.querySelector('.wh-fab-icon');
         if (iconSpan) {
-            iconSpan.style.width = `${fabSize}px`;
+            iconSpan.style.width  = `${fabSize}px`;
             iconSpan.style.height = `${fabSize}px`;
-            // Меняем иконку: глаз открыт когда виджеты скрыты (показать), закрыт когда видны (скрыть)
             iconSpan.innerHTML = isHidden ? iconEye() : iconEyeOff();
         }
-        
-        // Update menu label
+
         const fabLabel = document.getElementById('wh-fab-label');
         if (fabLabel) fabLabel.textContent = `Быстрая кнопка: ${fabVisible ? 'вкл' : 'выкл'}`;
     }

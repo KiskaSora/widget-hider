@@ -691,142 +691,51 @@
     }
 }
 
-/* ── FAB (Floating Action Button) - Слегка видная кнопка-глаз ────────────── */
-/* По принципу .stsa_fab из ST-silly-achievements - всегда видна на телефоне */
+/* ── FAB (Floating Action Button) ────────────────────────────────────────── */
 #widget-hider-fab {
-    --wh-fab-size: 28px;
-    position: fixed;
-    left: 14px;
+    position: fixed !important;
+    z-index: 99999 !important;
     top: 180px;
-    z-index: 99999;
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
-    background: var(--SmartThemeBlurTintColor, rgba(42, 42, 42, 0.3));
-    border-radius: 50%;
-    display: none;
+    left: 14px;
+    width: 44px;
+    height: 44px;
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    cursor: grab;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-    touch-action: none;
+    cursor: pointer;
+    padding: 5px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     user-select: none;
-    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease, opacity 200ms ease;
-    -webkit-tap-highlight-color: transparent;
-    /* Слегка видная - призрачная как глаз, подглядывающий */
+    -webkit-user-select: none;
+    touch-action: manipulation;
     opacity: 0.35;
+    transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), opacity 0.2s cubic-bezier(0.4,0,0.2,1);
+    -webkit-tap-highlight-color: transparent;
 }
 
-#widget-hider-fab.wh-fab-dragging {
-    cursor: grabbing;
-    opacity: 0.85 !important;
-    transform: none;
-    transition: none;
-}
+#widget-hider-fab:hover { opacity: 0.85; transform: scale(1.1); }
+#widget-hider-fab.wh-fab-active { opacity: 0.9; }
+#widget-hider-fab.wh-fab-active svg { filter: drop-shadow(0 0 4px currentColor); }
+#widget-hider-fab.wh-fab-disabled { opacity: 0.1; pointer-events: none; }
 
-/* FAB visible only when enabled */
-#widget-hider-fab.wh-fab-enabled {
-    display: flex;
-}
-
-/* FAB becomes more visible on hover (desktop) */
-#widget-hider-fab.wh-fab-enabled:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    background: var(--SmartThemeQuoteColor, rgba(58, 58, 58, 0.5));
-    opacity: 0.8;
-}
-
-/* FAB active state (widgets are hidden) */
-#widget-hider-fab.wh-fab-active.wh-fab-enabled {
-    opacity: 0.25;
-    border-color: var(--SmartThemeUserMesColorName, rgba(74, 158, 255, 0.3));
-}
-
-#widget-hider-fab.wh-fab-active.wh-fab-enabled:hover {
-    opacity: 0.75;
-}
-
-/* FAB icon - только иконка глаза */
+/* ── FAB icon ─────────────────────────────────────────────────────────────── */
 .wh-fab-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: var(--wh-fab-size, 24px);
-    height: var(--wh-fab-size, 24px);
-    color: var(--SmartThemeBodyColor, rgba(255, 255, 255, 0.9));
-    transition: color 0.15s ease;
+    width: 26px;
+    height: 26px;
+    pointer-events: none;
+    color: var(--SmartThemeFontColor, #fff);
 }
 
 .wh-fab-icon svg {
     width: 100%;
     height: 100%;
     stroke-width: 1.8;
-}
-
-#widget-hider-fab:hover .wh-fab-icon {
-    color: var(--SmartThemeUserMesColorName, #fff);
-}
-
-#widget-hider-fab.wh-fab-active .wh-fab-icon {
-    color: var(--SmartThemeUserMesColorName, #4a9eff);
-}
-
-/* ── Mobile FAB - ОБЯЗАТЕЛЬНО видна на телефоне ──────────────────────────── */
-@media (max-width: 768px) {
-    #widget-hider-fab {
-        /* Увеличенный размер для удобного касания */
-        width: 44px;
-        height: 44px;
-        --wh-fab-size: 22px;
-        /* Позиция слева внизу - не мешает основному UI */
-        left: 12px;
-        top: auto;
-        bottom: 140px;
-        /* Более видимая на мобильных */
-        opacity: 0.5;
-        background: var(--SmartThemeBlurTintColor, rgba(42, 42, 42, 0.5));
-        border-color: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.2));
-    }
-    
-    /* КРИТИЧНО: FAB ВСЕГДА отображается на мобильных когда включен */
-    #widget-hider-fab.wh-fab-enabled {
-        display: flex !important;
-        opacity: 0.5 !important;
-    }
-    
-    #widget-hider-fab.wh-fab-active.wh-fab-enabled {
-        opacity: 0.35 !important;
-    }
-    
-    /* При касании становится более видимой */
-    #widget-hider-fab.wh-fab-enabled:active {
-        opacity: 0.9 !important;
-        transform: scale(0.95);
-    }
-    
-    .wh-fab-icon {
-        min-width: 20px;
-        min-height: 20px;
-    }
-    
-    .wh-fab-icon svg {
-        stroke-width: 2;
-    }
-}
-
-/* Very small screens */
-@media (max-width: 480px) {
-    #widget-hider-fab {
-        width: 40px;
-        height: 40px;
-        --wh-fab-size: 20px;
-        left: 10px;
-        bottom: 120px;
-    }
 }
 
 /* ── FAB size slider in menu ─────────────────────────────────────────────── */
