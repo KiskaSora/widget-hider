@@ -23,7 +23,7 @@
         '#extensionsMenuButton', '#extensionsMenu', '.extensionsMenu',
         `#${EXT_NAME}-toggle`, `#${EXT_NAME}-menu`, `#${EXT_NAME}-pick-overlay`,
         `#${EXT_NAME}-pick-hint`, `#${EXT_NAME}-manage-panel`,
-        `#${EXT_NAME}-autoscan-panel`, `#${EXT_NAME}-pick-panel`,
+        `#${EXT_NAME}-autoscan-panel`,
         `#${EXT_NAME}-backdrop`, `#${EXT_NAME}-fab`,
     ];
 
@@ -36,12 +36,6 @@
     let pickModeActive = false;
     let menuOpen       = false;
     let isMobile       = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
-    
-    // FAB drag state
-    let fabDragging = false;
-    let fabDragStart = { x: 0, y: 0 };
-    let fabStartPos = { x: 0, y: 0 };
-    let fabMoved = false;
 
     // ── Detect mobile on resize ───────────────────────────────────────────────
     const UA_IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -200,27 +194,12 @@
                 <button class="wh-btn wh-btn-ghost" id="wh-scan-cancel">Отмена</button>
             </div>`;
 
-        // Mobile pick panel (альтернатива для мобильных устройств)
-        const pickPanel = el('div', { id: `${EXT_NAME}-pick-panel` });
-        pickPanel.innerHTML = `
-            <div class="wh-panel-header">
-                <span>Выберите виджеты</span>
-                <button class="wh-panel-close" id="wh-pick-close">✕</button>
-            </div>
-            <div class="wh-panel-body" id="wh-pick-list">
-                <div class="wh-panel-empty">Поиск виджетов…</div>
-            </div>
-            <div class="wh-panel-footer">
-                <button class="wh-btn" id="wh-pick-confirm">Добавить выбранные</button>
-                <button class="wh-btn wh-btn-ghost" id="wh-pick-cancel">Отмена</button>
-            </div>`;
-
         // Pick overlay + hint
         const overlay = el('div', { id: `${EXT_NAME}-pick-overlay` });
         const hint = el('div', { id: `${EXT_NAME}-pick-hint` });
         hint.innerHTML = `
-            🎯 Нажимайте на виджеты для выбора
-            <br><small style="opacity:0.7">Escape — отмена</small>
+            🎯 Нажмите на виджет, чтобы добавить его
+            <br><small style="opacity:0.7">Виджет под курсором/пальцем подсветится</small>
             <br><button id="${EXT_NAME}-pick-cancel" class="wh-btn wh-btn-ghost" style="margin-top:12px;">Отмена</button>
         `;
 
@@ -229,16 +208,11 @@
         const fab = el('div', { id: `${EXT_NAME}-fab` });
         fab.innerHTML = `<span class="wh-fab-icon">${iconEyeOff()}</span>`;
         fab.title = 'Переключить виджеты (перетащите чтобы переместить)';
-        fab.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (fabMoved) return;
-            if (isMobile) return; // на мобильных — только через touchend
-            toggleHide();
-            updateFabState();
-        });
+        // Тап/клик и перетаскивание полностью обрабатываются в initFabDrag()
+        // (mouseup/touchend), чтобы не было двойного переключения.
 
         // Аппендим в body всё кроме FAB
-        document.body.append(backdrop, menu, managePanel, scanPanel, pickPanel, overlay, hint);
+        document.body.append(backdrop, menu, managePanel, scanPanel, overlay, hint);
         // FAB аппендим в documentElement (<html>) — так он не зависит от
         // transform/zoom/overflow на body которые ST может применять на мобильных
         document.documentElement.appendChild(fab);
@@ -249,15 +223,9 @@
         document.getElementById('wh-action-pick').addEventListener('click', (e) => {
             e.stopPropagation();
             closeMenu();
-            // На мобильных устройствах используем список с чекбоксами вместо overlay,
-            // т.к. overlay-режим ненадёжно работает с touch-событиями и elementFromPoint
-            setTimeout(() => {
-                if (isMobile) {
-                    openPickPanel();
-                } else {
-                    enterPickMode();
-                }
-            }, 100);
+            // Единый режим прямого выбора для ПК и телефона: тап/клик по виджету
+            // подсвечивает его и добавляет в список.
+            setTimeout(() => enterPickMode(), 100);
         });
         document.getElementById('wh-action-auto').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); openScanPanel(); });
         document.getElementById('wh-action-manage').addEventListener('click', (e) => { e.stopPropagation(); closeMenu(); openManagePanel(); });
@@ -282,12 +250,9 @@
         document.getElementById('wh-scan-cancel').addEventListener('click', closeScanPanel);
         document.getElementById('wh-scan-confirm').addEventListener('click', confirmScan);
 
-        // Pick panel event listeners (для мобильных)
-        document.getElementById('wh-pick-close').addEventListener('click', closePickPanel);
-        document.getElementById('wh-pick-cancel').addEventListener('click', closePickPanel);
-        document.getElementById('wh-pick-confirm').addEventListener('click', confirmPickPanel);
-
+        // Прямой выбор виджета (ПК + телефон): клик/тап + подсветка под курсором/пальцем
         overlay.addEventListener('click', handlePickClick);
+        overlay.addEventListener('touchmove', onPickTouchMove, { passive: true });
         overlay.addEventListener('touchend', handlePickTouch, { passive: false });
         
         // Pick cancel button
@@ -312,7 +277,6 @@
         closeMenu();
         closeManagePanel();
         closeScanPanel();
-        closePickPanel();
     }
 
     // ── Menu functions ────────────────────────────────────────────────────────
@@ -601,19 +565,42 @@
         toastMsg(added > 0 ? `Добавлено: ${added}. Всего: ${hiddenTargets.length}` : 'Ничего не добавлено');
     }
 
-    // ── Pick Mode ─────────────────────────────────────────────────────────────
+    // ── Pick Mode (единый для ПК и телефона) ──────────────────────────────────
+    // Принцип: полупрозрачный overlay перехватывает клик/тап. Под курсором или
+    // пальцем виджет подсвечивается рамкой (widget-hider-pickable), по
+    // клику/тапу — добавляется в список. На телефоне touchmove даёт ту же
+    // «живую» подсветку, что и hover мышью на ПК.
     let lastHovered = null;
-    let pickPanelCandidates = [];
+
+    function highlightPickable(widget) {
+        if (lastHovered === widget) return;
+        if (lastHovered) lastHovered.classList.remove('widget-hider-pickable');
+        widget.classList.add('widget-hider-pickable');
+        lastHovered = widget;
+    }
+
+    // Находит виджет в точке экрана (overlay временно пропускает клики насквозь).
+    function widgetAtPoint(x, y) {
+        const overlay = document.getElementById(`${EXT_NAME}-pick-overlay`);
+        const prev = overlay.style.pointerEvents;
+        overlay.style.pointerEvents = 'none';
+        const target = document.elementFromPoint(x, y);
+        overlay.style.pointerEvents = prev;
+        if (!target || isCoreElement(target)) return null;
+        const widget = findWidgetRoot(target);
+        if (!widget || isCoreElement(widget)) return null;
+        return widget;
+    }
 
     function enterPickMode() {
         pickModeActive = true;
         document.getElementById(`${EXT_NAME}-pick-overlay`).classList.add('active');
         document.getElementById(`${EXT_NAME}-pick-hint`).style.display = 'block';
-        
-        // На desktop добавляем hover эффект
-        if (!isMobile) {
-            document.addEventListener('mousemove', onPickHover, true);
-        }
+        // Прячем FAB, чтобы он не перехватывал тапы и не мешал выбору
+        const fab = document.getElementById(`${EXT_NAME}-fab`);
+        if (fab) fab.style.display = 'none';
+        // Живая подсветка под курсором (ПК)
+        document.addEventListener('mousemove', onPickHover, true);
     }
 
     function exitPickMode() {
@@ -623,19 +610,23 @@
         document.removeEventListener('mousemove', onPickHover, true);
         document.querySelectorAll('.widget-hider-pickable').forEach(n => n.classList.remove('widget-hider-pickable'));
         lastHovered = null;
+        // Возвращаем FAB
+        updateFabState();
+        applyFabPosition();
     }
 
     function onPickHover(e) {
-        const overlay = document.getElementById(`${EXT_NAME}-pick-overlay`);
-        overlay.style.pointerEvents = 'none';
-        const target = document.elementFromPoint(e.clientX, e.clientY);
-        overlay.style.pointerEvents = '';
-        if (!target || isCoreElement(target)) return;
-        const widget = findWidgetRoot(target);
-        if (!widget || isCoreElement(widget)) return;
-        if (lastHovered && lastHovered !== widget) lastHovered.classList.remove('widget-hider-pickable');
-        widget.classList.add('widget-hider-pickable');
-        lastHovered = widget;
+        const widget = widgetAtPoint(e.clientX, e.clientY);
+        if (widget) highlightPickable(widget);
+    }
+
+    // Живая подсветка под пальцем на телефоне
+    function onPickTouchMove(e) {
+        if (!pickModeActive) return;
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        const widget = widgetAtPoint(t.clientX, t.clientY);
+        if (widget) highlightPickable(widget);
     }
 
     function handlePickClick(e) {
@@ -653,153 +644,22 @@
     }
 
     function processPickAt(x, y) {
-        const overlay = document.getElementById(`${EXT_NAME}-pick-overlay`);
-        overlay.style.pointerEvents = 'none';
-        const target = document.elementFromPoint(x, y);
-        overlay.style.pointerEvents = '';
-
-        if (!target || isCoreElement(target)) {
-            exitPickMode();
-            return;
-        }
-
-        const widget = findWidgetRoot(target);
-        if (!widget || isCoreElement(widget)) {
-            exitPickMode();
-            return;
-        }
+        const widget = widgetAtPoint(x, y);
+        if (!widget) { exitPickMode(); return; }
 
         const sel = buildSelector(widget);
-        if (!sel) {
-            exitPickMode();
-            return;
-        }
+        if (!sel) { exitPickMode(); return; }
 
-        // Single pick - add immediately
         if (!hiddenTargets.includes(sel)) {
             hiddenTargets.push(sel);
             saveJSON(STORAGE_KEY, hiddenTargets);
+            if (isHidden) widget.classList.add('wh-hidden-widget');
+            updateMenuState();
+            toastMsg(`Виджет добавлен (${hiddenTargets.length} шт.)`);
+        } else {
+            toastMsg('Этот виджет уже в списке');
         }
-        if (isHidden) widget.classList.add('wh-hidden-widget');
         exitPickMode();
-        updateMenuState();
-        toastMsg(`Виджет добавлен (${hiddenTargets.length} шт.)`);
-    }
-
-    // ── Mobile Pick Panel (альтернатива для мобильных устройств) ──────────────
-    function openPickPanel() {
-        pickPanelCandidates = collectPickCandidates();
-        renderPickPanel();
-        document.getElementById(`${EXT_NAME}-backdrop`).classList.add('active');
-        document.getElementById(`${EXT_NAME}-pick-panel`).classList.add('open');
-    }
-
-    function closePickPanel() {
-        document.getElementById(`${EXT_NAME}-pick-panel`).classList.remove('open');
-        document.getElementById(`${EXT_NAME}-backdrop`).classList.remove('active');
-        document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
-        pickPanelCandidates = [];
-    }
-
-    function collectPickCandidates() {
-        const seen = new Set();
-        const found = [];
-
-        function add(node) {
-            if (isCoreElement(node)) return;
-            const sel = buildSelector(node);
-            if (!sel || seen.has(sel)) return;
-            seen.add(sel);
-            const alreadyAdded = hiddenTargets.includes(sel);
-            found.push({ node, sel, checked: false, alreadyAdded });
-        }
-
-        // Сначала все плавающие элементы
-        document.querySelectorAll('body > *').forEach(node => {
-            const s = window.getComputedStyle(node);
-            if (s.position === 'fixed' || s.position === 'absolute') add(node);
-        });
-
-        document.querySelectorAll('[style*="position: fixed"],[style*="position:fixed"]').forEach(add);
-
-        // Паттерны для виджетов
-        ['[id$="-widget"]','[id$="-panel"]','[id*="extension"]','.extension-','.ext-','.floating-'].forEach(pat => {
-            try {
-                document.querySelectorAll(pat).forEach(node => {
-                    const s = window.getComputedStyle(node);
-                    if (['fixed','absolute'].includes(s.position)) add(node);
-                });
-            } catch(_) {}
-        });
-
-        return found;
-    }
-
-    function renderPickPanel() {
-        const list = document.getElementById('wh-pick-list');
-        list.innerHTML = '';
-
-        if (pickPanelCandidates.length === 0) {
-            list.innerHTML = '<div class="wh-panel-empty">Плавающих виджетов не обнаружено.</div>';
-            return;
-        }
-
-        pickPanelCandidates.forEach((c, idx) => {
-            const row = el('div');
-            row.className = 'wh-pick-row' + (c.alreadyAdded ? ' wh-pick-already' : '');
-
-            let label = c.sel;
-            const text = (c.node.title || c.node.getAttribute('aria-label') || c.node.textContent || '').trim().slice(0, 40);
-            if (text) label += `  — "${text}"`;
-
-            row.innerHTML = `
-                <div class="wh-pick-check">
-                    <input type="checkbox" data-idx="${idx}" ${c.checked ? 'checked' : ''} ${c.alreadyAdded ? 'disabled' : ''}>
-                    <span class="wh-pick-sel" title="${escapeHtml(c.sel)}">${escapeHtml(label)}</span>
-                    ${c.alreadyAdded ? '<em class="wh-pick-note">(уже добавлен)</em>' : ''}
-                </div>`;
-
-            const cb = row.querySelector('input');
-            
-            cb.addEventListener('change', (e) => { 
-                e.stopPropagation();
-                pickPanelCandidates[idx].checked = cb.checked; 
-            });
-            
-            cb.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-
-            row.addEventListener('click', (e) => {
-                if (e.target.tagName === 'INPUT' || c.alreadyAdded) return;
-                
-                cb.checked = !cb.checked;
-                pickPanelCandidates[idx].checked = cb.checked;
-                
-                // Подсветить элемент
-                document.querySelectorAll('.wh-highlighted').forEach(n => n.classList.remove('wh-highlighted'));
-                c.node.classList.add('wh-highlighted');
-            });
-
-            list.appendChild(row);
-        });
-    }
-
-    function confirmPickPanel() {
-        let added = 0;
-        pickPanelCandidates.forEach(c => {
-            if (c.checked && !hiddenTargets.includes(c.sel)) {
-                hiddenTargets.push(c.sel);
-                if (isHidden) {
-                    try { c.node.classList.add('wh-hidden-widget'); } catch(_) {}
-                }
-                added++;
-            }
-        });
-        saveJSON(STORAGE_KEY, hiddenTargets);
-        updateMenuState();
-        closePickPanel();
-        toastMsg(added > 0 ? `Добавлено: ${added}. Всего: ${hiddenTargets.length}` : 'Ничего не добавлено');
     }
 
     // ── Hide / Show ───────────────────────────────────────────────────────────
@@ -981,107 +841,6 @@
             dm = false; rafId = null;
         });
     }
-    
-    function onFabDragStart(e) {
-        if (e.button !== 0) return; // Only left click
-        e.preventDefault();
-        startFabDrag(e.clientX, e.clientY);
-    }
-    
-    function onFabTouchStart(e) {
-        if (e.touches.length !== 1) return;
-        e.preventDefault();
-        const touch = e.touches[0];
-        startFabDrag(touch.clientX, touch.clientY);
-    }
-    
-    function startFabDrag(x, y) {
-        const fab = document.getElementById(`${EXT_NAME}-fab`);
-        if (!fab) return;
-        
-        fabDragging = true;
-        fabMoved = false;
-        fabDragStart = { x, y };
-        
-        const rect = fab.getBoundingClientRect();
-        fabStartPos = { x: rect.left, y: rect.top };
-        
-        fab.classList.add('wh-fab-dragging');
-    }
-    
-    function onFabDragMove(e) {
-        if (!fabDragging) return;
-        e.preventDefault();
-        moveFabTo(e.clientX, e.clientY);
-    }
-    
-    function onFabTouchMove(e) {
-        if (!fabDragging) return;
-        if (e.touches.length !== 1) return;
-        e.preventDefault(); // нужен для блокировки скролла во время drag
-        const touch = e.touches[0];
-        moveFabTo(touch.clientX, touch.clientY);
-    }
-    
-    function moveFabTo(x, y) {
-        const fab = document.getElementById(`${EXT_NAME}-fab`);
-        if (!fab) return;
-        
-        const dx = x - fabDragStart.x;
-        const dy = y - fabDragStart.y;
-        
-        // Consider it moved if dragged more than 5px
-        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-            fabMoved = true;
-        }
-        
-        let newX = fabStartPos.x + dx;
-        let newY = fabStartPos.y + dy;
-        
-        // Constrain to viewport
-        const fabRect = fab.getBoundingClientRect();
-        const maxX = window.innerWidth - fabRect.width;
-        const maxY = window.innerHeight - fabRect.height;
-        
-        newX = Math.max(0, Math.min(newX, maxX));
-        newY = Math.max(0, Math.min(newY, maxY));
-        
-        fab.style.right = 'auto';
-        fab.style.bottom = 'auto';
-        fab.style.left = `${newX}px`;
-        fab.style.top = `${newY}px`;
-    }
-    
-    function onFabDragEnd(e) {
-        endFabDrag();
-    }
-    
-    function onFabTouchEnd(e) {
-        endFabDrag();
-    }
-    
-    function endFabDrag() {
-        if (!fabDragging) return;
-        
-        const fab = document.getElementById(`${EXT_NAME}-fab`);
-        if (fab) {
-            fab.classList.remove('wh-fab-dragging');
-            
-            // Save position if moved
-            if (fabMoved) {
-                const rect = fab.getBoundingClientRect();
-                fabPosition = { x: rect.left, y: rect.top };
-                saveJSON(STORAGE_FAB_POS, fabPosition);
-            }
-        }
-        
-        fabDragging = false;
-        
-        // If moved, prevent click from firing
-        if (fabMoved) {
-            setTimeout(() => { fabMoved = false; }, 100);
-        }
-    }
 
     function updateFabState() {
         const fab = document.getElementById(`${EXT_NAME}-fab`);
@@ -1176,61 +935,31 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────
     function init() {
-        console.log('[Widget Hider] init() started');
-        console.log('[Widget Hider] viewport:', window.innerWidth, 'x', window.innerHeight);
-        console.log('[Widget Hider] fabVisible from storage:', fabVisible);
-        console.log('[Widget Hider] fabPosition from storage:', fabPosition);
-        console.log('[Widget Hider] isMobile:', isMobile);
-        
         buildUI();
         initFabDrag();
         updateMenuState();
-        
+
         // Сначала включаем display:flex у FAB через updateFabState,
         // чтобы applyFabPosition мог корректно измерить размеры кнопки
         updateFabState();
         applyFabPosition();
         if (isHidden) applyHiddenState();
-        
-        // Проверяем состояние FAB после инициализации
-        const fab = document.getElementById(`${EXT_NAME}-fab`);
-        if (fab) {
-            const styles = window.getComputedStyle(fab);
-            console.log('[Widget Hider] FAB element found');
-            console.log('[Widget Hider] FAB classes:', fab.className);
-            console.log('[Widget Hider] FAB computed display:', styles.display);
-            console.log('[Widget Hider] FAB computed position:', styles.position);
-            console.log('[Widget Hider] FAB computed right:', styles.right);
-            console.log('[Widget Hider] FAB computed bottom:', styles.bottom);
-            console.log('[Widget Hider] FAB computed left:', styles.left);
-            console.log('[Widget Hider] FAB computed top:', styles.top);
-            console.log('[Widget Hider] FAB getBoundingClientRect:', fab.getBoundingClientRect());
-        } else {
-            console.error('[Widget Hider] FAB element NOT found!');
-        }
-        
+
         // Re-apply after page settles (важно для мобильных:
         // мобильные браузеры могут менять innerHeight после старта из-за address bar)
         setTimeout(() => {
-            console.log('[Widget Hider] 500ms re-apply');
             if (isHidden) applyHiddenState();
             updateMenuState();
             updateFabState();
             applyFabPosition();
-            
-            const fab2 = document.getElementById(`${EXT_NAME}-fab`);
-            if (fab2) {
-                console.log('[Widget Hider] FAB rect after 500ms:', fab2.getBoundingClientRect());
-            }
         }, 500);
-        
+
         setTimeout(() => {
-            console.log('[Widget Hider] 2000ms re-apply');
             updateFabState();
             applyFabPosition();
         }, 2000);
-        
-        console.log('Widget Hider v2.7 - Ready (with debug logging)');
+
+        console.log('[Widget Hider] v2.8 ready');
     }
 
     if (document.readyState === 'loading') {

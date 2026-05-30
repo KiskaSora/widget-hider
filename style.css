@@ -384,10 +384,14 @@
 #widget-hider-pick-overlay {
     position: fixed;
     inset: 0;
-    z-index: 999990;
+    /* Очень высокий z-index, чтобы overlay надёжно перехватывал клик/тап
+       поверх любых виджетов (FAB на время выбора скрыт). */
+    z-index: 2147483640;
     background: rgba(0, 0, 0, 0.3);
     cursor: crosshair;
     display: none;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
 }
 #widget-hider-pick-overlay.active { display: block; }
 
@@ -407,7 +411,7 @@
     text-align: center;
     /* Allow clicks on buttons inside */
     pointer-events: auto;
-    z-index: 999995;
+    z-index: 2147483646;
     line-height: 1.7;
     display: none;
     max-width: 90vw;
